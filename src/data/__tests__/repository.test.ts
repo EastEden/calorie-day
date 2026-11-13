@@ -248,6 +248,45 @@ describe('IndexedDbRepository', () => {
     expect(await reopened.getDailyLog('2026-11-13')).not.toBeNull();
   });
 
+  it('renames the legacy firm tofu built-in to 老豆腐', async () => {
+    dbName = `calorie-test-tofu-rename-${Date.now()}-${Math.random()}`;
+    const repo = createRepository();
+    await repo.initialize();
+
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(dbName);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction('foods', 'readwrite');
+      const store = transaction.objectStore('foods');
+      const get = store.get('builtin-firm-tofu');
+      get.onsuccess = () => {
+        const food = get.result;
+        store.put({
+          ...food,
+          names: {
+            ...food.names,
+            'zh-CN': '北豆腐',
+          },
+        });
+      };
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    db.close();
+    await repo.close();
+
+    const reopened = createRepository();
+    await reopened.initialize();
+    const tofu = (await reopened.listFoods()).find(
+      (food) => food.id === 'builtin-firm-tofu',
+    );
+
+    expect(tofu?.names['zh-CN']).toBe('老豆腐');
+  });
+
   it('persists profile and target settings across repository instances', async () => {
     dbName = `calorie-test-profile-${Date.now()}-${Math.random()}`;
     const repo = createRepository();

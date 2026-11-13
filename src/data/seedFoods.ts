@@ -361,7 +361,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'firm-tofu',
-    names: { 'zh-CN': '北豆腐' },
+    names: { 'zh-CN': '老豆腐' },
     category: 'egg_dairy_soy',
     basis: 'as_sold',
     kcal: 116,
