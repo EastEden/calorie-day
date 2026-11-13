@@ -2,6 +2,7 @@ import { Info } from 'lucide-react';
 import { isLocalTestToolsEnabled } from '../../app/environment';
 import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
+import { BackupCard } from './BackupCard';
 import { LocalToolsCard } from './LocalToolsCard';
 import { ProfileForm } from './ProfileForm';
 import { StorageCard } from './StorageCard';
@@ -32,6 +33,10 @@ export function SettingsPage() {
         <TargetCard />
         <div className="settings-grid__full">
           <StorageCard />
+        </div>
+
+        <div className="settings-grid__full">
+          <BackupCard />
         </div>
 
         {showLocalTools && (

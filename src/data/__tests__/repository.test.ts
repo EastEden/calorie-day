@@ -6,7 +6,14 @@ import {
   deleteDatabaseForTests,
 } from '../../data/repository';
 import { createEmptyDailyLog, createFoodEntry } from '../../domain/logFactory';
-import type { DailyLog, TargetSettings, UserProfile } from '../../domain/types';
+import type {
+  BackupPayload,
+  DailyLog,
+  Food,
+  TargetSettings,
+  UserProfile,
+} from '../../domain/types';
+import { SEED_FOODS } from '../../data/seedFoods';
 
 let dbName = '';
 let repository: IndexedDbRepository | null = null;
@@ -34,6 +41,52 @@ const settings: TargetSettings = {
 
 function makeLog(date = '2026-11-13'): DailyLog {
   return createEmptyDailyLog(date);
+}
+
+const backupFood: Food = {
+  ...SEED_FOODS[0]!,
+  id: 'backup-food',
+  names: { 'zh-CN': '备份食物' },
+};
+
+const backupProfile: UserProfile = {
+  ...profile,
+  age: 40,
+  updatedAt: '2026-11-14T00:00:00.000Z',
+};
+
+const backupSettings: TargetSettings = {
+  mode: 'manual',
+  manual: { kcal: 2100, proteinG: 130, carbsG: 220, fatG: 65 },
+  updatedAt: '2026-11-14T00:00:00.000Z',
+};
+
+function makeBackupLog(date = '2026-11-14'): DailyLog {
+  const log = createEmptyDailyLog(date);
+  log.meals.breakfast.push(
+    createFoodEntry(backupFood, {
+      grams: 120,
+      enteredQuantity: 120,
+      enteredUnit: 'g',
+    }),
+  );
+  return log;
+}
+
+function makeBackupPayload(
+  overrides: Partial<BackupPayload> = {},
+): BackupPayload {
+  return {
+    backupVersion: 1,
+    exportedAt: '2026-11-14T00:00:00.000Z',
+    logsFrom: '2026-11-13',
+    logsTo: '2026-11-14',
+    profile: backupProfile,
+    targetSettings: backupSettings,
+    foods: [backupFood],
+    logs: [makeBackupLog()],
+    ...overrides,
+  };
 }
 
 function createLegacyV1Database(name: string): Promise<void> {
@@ -184,6 +237,87 @@ describe('IndexedDbRepository', () => {
     );
     expect(loaded?.meals.breakfast[0]?.amountGrams).toBe(150);
     expect(loaded?.revision).toBe(1);
+  });
+
+  it('lists daily logs within a date range', async () => {
+    dbName = `calorie-test-log-range-${Date.now()}-${Math.random()}`;
+    const repo = createRepository();
+    await repo.initialize();
+
+    for (const date of ['2026-11-10', '2026-11-11', '2026-11-12']) {
+      await repo.saveDailyLog(makeLog(date));
+    }
+
+    const logs = await repo.listDailyLogs('2026-11-11', '2026-11-12');
+    expect(logs.map((log) => log.date)).toEqual([
+      '2026-11-11',
+      '2026-11-12',
+    ]);
+    expect(await repo.listDailyLogs()).toHaveLength(3);
+  });
+
+  it('imports missing profile, settings, foods and logs from a backup', async () => {
+    dbName = `calorie-test-backup-fill-${Date.now()}-${Math.random()}`;
+    const repo = createRepository();
+    await repo.initialize();
+
+    const result = await repo.importBackup(makeBackupPayload());
+
+    expect(result).toEqual({
+      foodsAdded: 1,
+      foodsSkipped: 0,
+      logsAdded: 1,
+      logsSkipped: 0,
+      profileImported: true,
+      settingsImported: true,
+    });
+    expect((await repo.getProfile())?.age).toBe(40);
+    expect((await repo.getTargetSettings()).manual).toEqual(
+      backupSettings.manual,
+    );
+    expect(
+      (await repo.listFoods()).some((food) => food.id === 'backup-food'),
+    ).toBe(true);
+    expect(
+      (await repo.getDailyLog('2026-11-14'))?.meals.breakfast,
+    ).toHaveLength(1);
+  });
+
+  it('preserves existing data when importing a full backup', async () => {
+    dbName = `calorie-test-backup-merge-${Date.now()}-${Math.random()}`;
+    const repo = createRepository();
+    await repo.initialize();
+    await repo.saveProfile(profile);
+    await repo.saveTargetSettings(settings);
+    await repo.saveDailyLog(makeLog('2026-11-13'));
+
+    const result = await repo.importBackup(
+      makeBackupPayload({
+        profile: backupProfile,
+        targetSettings: backupSettings,
+        logs: [
+          makeBackupLog('2026-11-13'),
+          makeBackupLog('2026-11-14'),
+        ],
+      }),
+    );
+
+    expect(result).toEqual({
+      foodsAdded: 1,
+      foodsSkipped: 0,
+      logsAdded: 1,
+      logsSkipped: 1,
+      profileImported: false,
+      settingsImported: false,
+    });
+    expect((await repo.getProfile())?.age).toBe(28);
+    expect((await repo.getTargetSettings()).manual).toEqual(settings.manual);
+    expect(
+      (await repo.getDailyLog('2026-11-13'))?.meals.breakfast,
+    ).toHaveLength(0);
+    expect(
+      (await repo.getDailyLog('2026-11-14'))?.meals.breakfast,
+    ).toHaveLength(1);
   });
 
   it('rejects a stale write and leaves the stored record unchanged', async () => {

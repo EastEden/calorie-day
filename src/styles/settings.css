@@ -221,6 +221,53 @@
 }
 
 /* Storage */
+.backup-export {
+  display: grid;
+  gap: 14px;
+}
+
+.backup-date-range {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.backup-export__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.backup-import {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.backup-import strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.backup-import p {
+  max-width: 540px;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10.5px;
+  line-height: 1.55;
+}
+
+.backup-range-text {
+  margin-top: -3px;
+  color: var(--muted);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+}
+
 .settings-card--storage {
   grid-column: 1 / -1;
 }
@@ -556,6 +603,21 @@
   .storage-actions .btn {
     width: 100%;
     align-self: stretch;
+  }
+
+  .backup-date-range {
+    grid-template-columns: 1fr;
+  }
+
+  .backup-export__actions .btn,
+  .backup-import .btn {
+    width: 100%;
+  }
+
+  .backup-import {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
   }
 
   .field-row {
