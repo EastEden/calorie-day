@@ -286,9 +286,13 @@ describe('IndexedDbRepository', () => {
     await repo.initialize();
 
     const foods = await repo.listFoods();
-    expect(foods).toHaveLength(1);
-    expect(foods[0]?.names).toEqual({ 'zh-CN': '旧版鸡胸肉' });
-    expect('name' in (foods[0] ?? {})).toBe(false);
+    expect(foods).toHaveLength(2);
+    const legacyFood = foods.find((food) => food.id === 'legacy-food');
+    expect(legacyFood?.names).toEqual({ 'zh-CN': '旧版鸡胸肉' });
+    expect('name' in (legacyFood ?? {})).toBe(false);
+    expect(foods.some((food) => food.id === 'builtin-peanut-oil')).toBe(
+      true,
+    );
 
     const log = await repo.getDailyLog('2026-11-13');
     expect(log?.meals.breakfast[0]?.foodNames).toEqual({
@@ -304,7 +308,10 @@ describe('IndexedDbRepository', () => {
       request.onerror = () => reject(request.error);
     });
     expect(rawDb.version).toBe(2);
-    const meta = await new Promise<{ schemaVersion?: number } | undefined>(
+    const meta = await new Promise<{
+      schemaVersion?: number;
+      seedVersion?: number;
+    } | undefined>(
       (resolve, reject) => {
         const transaction = rawDb.transaction('meta', 'readonly');
         const request = transaction.objectStore('meta').get('app');
@@ -313,6 +320,7 @@ describe('IndexedDbRepository', () => {
       },
     );
     expect(meta?.schemaVersion).toBe(2);
+    expect(meta?.seedVersion).toBe(2);
     rawDb.close();
   });
 

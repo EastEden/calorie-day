@@ -217,7 +217,7 @@ export const zhCN = {
   'quickOil.amountAria': '选择用油量',
   'quickOil.gramsAria': '自定义克数',
   'quickOil.quickAmount': '{{value}}g',
-  'quickOil.amountHint': '默认 10g，可快速调整。',
+  'quickOil.amountHint': '默认 5g，可快速调整。',
   'quickOil.preview': '本次摄入',
   'quickOil.previewDetail': '{{kcal}} kcal · 脂肪 {{fat}}g',
   'quickOil.submit': '加入{{meal}}',

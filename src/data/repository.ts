@@ -15,7 +15,11 @@ import type {
   UserProfile,
 } from '../domain/types';
 import { upgradeDatabaseV1ToV2 } from './migrations';
-import { SEED_FOODS, SEED_VERSION } from './seedFoods';
+import {
+  SEED_FOODS,
+  SEED_FOOD_ADDITIONS,
+  SEED_VERSION,
+} from './seedFoods';
 
 const DEFAULT_DB_NAME = 'calorie-day';
 const DB_VERSION = 2;
@@ -32,7 +36,7 @@ type StoreName = (typeof STORES)[keyof typeof STORES];
 
 interface AppMeta {
   schemaVersion: 2;
-  seedVersion: 1;
+  seedVersion: 2;
   createdAt: string;
 }
 
@@ -170,6 +174,10 @@ function openDatabase(dbName: string): Promise<IDBDatabase> {
   });
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function parseStored<T>(
   schema: z.ZodType<T, z.ZodTypeDef, unknown>,
   raw: unknown,
@@ -285,6 +293,7 @@ export class IndexedDbRepository implements CalorieRepository {
     );
 
     if (existingMeta !== undefined) {
+      await this.applySeedAdditions(db, existingMeta);
       return;
     }
 
@@ -309,6 +318,55 @@ export class IndexedDbRepository implements CalorieRepository {
     }
 
     transaction.objectStore(STORES.meta).put(meta, 'app');
+    await transactionAsPromise(transaction);
+  }
+
+  /**
+   * Adds newly introduced built-in foods without restoring built-ins the user
+   * deleted before the seed update. The meta seedVersion prevents this from
+   * running again after the additions have been applied.
+   */
+  private async applySeedAdditions(
+    db: IDBDatabase,
+    existingMeta: unknown,
+  ): Promise<void> {
+    if (!isRecord(existingMeta)) {
+      return;
+    }
+
+    const currentSeedVersion =
+      typeof existingMeta.seedVersion === 'number'
+        ? existingMeta.seedVersion
+        : 1;
+    if (currentSeedVersion >= SEED_VERSION) {
+      return;
+    }
+
+    const additions = SEED_FOOD_ADDITIONS.filter(
+      (addition) => addition.version > currentSeedVersion,
+    );
+    const transaction = db.transaction(
+      [STORES.foods, STORES.meta],
+      'readwrite',
+    );
+    const foodStore = transaction.objectStore(STORES.foods);
+
+    for (const addition of additions) {
+      const request = foodStore.get(addition.food.id);
+      request.onsuccess = () => {
+        if (request.result === undefined) {
+          foodStore.put(foodSchema.parse(addition.food));
+        }
+      };
+    }
+
+    transaction.objectStore(STORES.meta).put(
+      {
+        ...existingMeta,
+        seedVersion: SEED_VERSION,
+      },
+      'app',
+    );
     await transactionAsPromise(transaction);
   }
 

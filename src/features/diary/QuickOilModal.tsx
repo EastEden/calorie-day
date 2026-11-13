@@ -40,7 +40,7 @@ export function QuickOilModal({
   const { foods, actions, isSaving } = useApp();
   const oils = useMemo(() => getCookingOilFoods(foods), [foods]);
   const [oilId, setOilId] = useState('');
-  const [amount, setAmount] = useState('10');
+  const [amount, setAmount] = useState('5');
   const [attempted, setAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -70,7 +70,7 @@ export function QuickOilModal({
     }
 
     setOilId(getDefaultCookingOil(oils)?.id ?? '');
-    setAmount('10');
+    setAmount('5');
     setAttempted(false);
     setSubmitting(false);
   }, [mealType, oils, open]);

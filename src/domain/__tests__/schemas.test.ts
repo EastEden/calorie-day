@@ -20,7 +20,10 @@ describe('food import schema', () => {
         foodSchema.parse(food);
       }
     }).not.toThrow();
-    expect(SEED_FOODS).toHaveLength(54);
+    expect(SEED_FOODS).toHaveLength(55);
+    expect(
+      SEED_FOODS.some((food) => food.names['zh-CN'] === '花生油'),
+    ).toBe(true);
   });
 
   it('parses a valid v2 JSON payload with extra locales', () => {

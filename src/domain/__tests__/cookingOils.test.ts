@@ -19,9 +19,11 @@ describe('cookingOils', () => {
   it('recognizes built-in cooking oil and excludes nuts', () => {
     expect(isCookingOilFood(oliveOil)).toBe(true);
     expect(isCookingOilFood(almond)).toBe(false);
-    expect(getCookingOilFoods(SEED_FOODS).map((food) => food.id)).toContain(
-      DEFAULT_COOKING_OIL_ID,
+    const availableOils = getCookingOilFoods(SEED_FOODS).map(
+      (food) => food.id,
     );
+    expect(availableOils).toContain(DEFAULT_COOKING_OIL_ID);
+    expect(availableOils).toContain('builtin-peanut-oil');
   });
 
   it('accepts custom localized oil names', () => {
