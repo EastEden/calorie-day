@@ -197,6 +197,18 @@ IndexedDB 结构版本保持为 `2`，并保留 v1 → v2 的名称兼容迁移�
 生产部署默认不会显示这个入口。也可以通过 `VITE_ENABLE_LOCAL_TOOLS=false`
 在本地强制隐藏，避免误操作。
 
+## GitHub Pages 部署
+
+正式站点：`https://easteden.github.io/calorie-day/`
+
+- 部署工作流见 [`.github/workflows/deploy-pages.yml`](.github/workflows/deploy-pages.yml)。
+- 推送到 `main` 后会自动运行测试、构建并发布 `dist/`，也可以在 Actions 页面手动触发。
+- GitHub 仓库设置中需要将 **Settings → Pages → Build and deployment → Source** 设为 **GitHub Actions**。
+- Vite 在 GitHub Actions 构建时使用 `/calorie-day/` 作为 base；本地开发仍使用 `/`，不影响 `http://localhost:5173/`。
+- 这是项目页面，代码和站点都是公开的；饮食数据仍然只保存在访问者自己的浏览器 IndexedDB 中，不会上传。
+- 浏览器数据按域名隔离。`localhost` 里的数据不会自动出现在 Pages 站点上；需要先在旧地址导出全量备份，再到 Pages 站点导入。
+- 如果以后绑定自定义域名或在用户主页仓库部署，需要相应调整 `vite.config.ts` 中的 `base`。
+
 ## 国际化（i18n）
 
 项目已接入 i18next，但目前**只提供简体中文**，因此界面上没有语言切换器。

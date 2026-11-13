@@ -2,6 +2,8 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
+  // Project GitHub Pages are served from /<repository>/; local dev stays at /.
+  base: process.env.GITHUB_ACTIONS ? '/calorie-day/' : '/',
   plugins: [react()],
   server: {
     host: 'localhost',
