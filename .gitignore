@@ -1,7 +1,7 @@
 node_modules
 dist
 .npm-cache
-.playwright-profile
+.playwright-profile*
 coverage
 *.local
 .DS_Store

@@ -295,6 +295,129 @@
   line-height: 1.65;
 }
 
+/* Local-only testing tools */
+.settings-card--local-tools {
+  border: 1px dashed var(--danger-line);
+  background:
+    linear-gradient(135deg, rgba(180, 79, 74, 0.035), transparent 44%),
+    var(--surface);
+}
+
+.settings-card--local-tools .eyebrow {
+  color: var(--danger);
+}
+
+.storage-icon--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.local-tools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 15px;
+  border: 1px solid var(--danger-line);
+  border-radius: var(--radius-md);
+  background: var(--danger-soft);
+}
+
+.local-tools__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-width: 0;
+}
+
+.local-tools__notice > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--danger);
+}
+
+.local-tools__notice strong {
+  display: block;
+  color: #7b443f;
+  font-size: 11.5px;
+  font-weight: 680;
+}
+
+.local-tools__notice p {
+  max-width: 680px;
+  margin-top: 3px;
+  color: #8d5c56;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.local-tools .btn {
+  flex: none;
+}
+
+.reset-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.reset-dialog__warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 12px 13px;
+  border: 1px solid var(--danger-line);
+  border-radius: var(--radius-sm);
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.reset-dialog__warning > svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+.reset-dialog__warning p {
+  color: #7b443f;
+  font-size: 11.5px;
+  line-height: 1.55;
+}
+
+.reset-dialog__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-left: 3px;
+  color: var(--ink-soft);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+.reset-dialog__list li::before {
+  margin-right: 7px;
+  color: var(--danger);
+  content: "·";
+}
+
+.reset-dialog__hint {
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.check-row--danger {
+  border-color: var(--danger-line);
+  background: var(--danger-soft);
+}
+
+.check-row--danger input {
+  accent-color: var(--danger);
+}
+
+.check-row--danger strong {
+  color: #7b443f;
+}
+
 /* Info */
 .settings-card--info {
   grid-column: 1 / -1;
@@ -385,6 +508,16 @@
 
   .settings-card__actions .btn,
   .storage-actions .btn {
+    align-self: flex-start;
+  }
+
+  .local-tools {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .local-tools .btn {
     align-self: flex-start;
   }
 

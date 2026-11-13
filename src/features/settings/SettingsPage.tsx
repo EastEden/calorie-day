@@ -1,15 +1,18 @@
 import { Info } from 'lucide-react';
+import { isLocalTestToolsEnabled } from '../../app/environment';
 import {
   DATA_REFERENCE_NOTE,
   NUTRITION_REFERENCE_NOTE,
 } from '../../domain/constants';
 import { useApp } from '../../state/AppContext';
+import { LocalToolsCard } from './LocalToolsCard';
 import { ProfileForm } from './ProfileForm';
 import { StorageCard } from './StorageCard';
 import { TargetCard } from './TargetCard';
 
 export function SettingsPage() {
   const { foods, targetSettings } = useApp();
+  const showLocalTools = isLocalTestToolsEnabled();
 
   return (
     <div className="settings-page page-width">
@@ -32,6 +35,12 @@ export function SettingsPage() {
         <div className="settings-grid__full">
           <StorageCard />
         </div>
+
+        {showLocalTools && (
+          <div className="settings-grid__full">
+            <LocalToolsCard />
+          </div>
+        )}
 
         <section className="settings-card settings-card--info">
           <header className="settings-card__header">

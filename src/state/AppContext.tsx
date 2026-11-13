@@ -91,6 +91,7 @@ interface AppActions {
   refreshStorageInfo: () => Promise<void>;
   retryInitialization: () => void;
   retryLogLoad: () => void;
+  resetAllData: () => Promise<boolean>;
 }
 
 interface AppContextValue {
@@ -603,6 +604,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLogReloadToken((value) => value + 1);
   }, []);
 
+  const resetAllData = useCallback(async (): Promise<boolean> => {
+    if (savingRef.current) {
+      showToast('正在保存，请稍后再试。', 'info');
+      return false;
+    }
+
+    try {
+      await repository.resetAllData();
+      window.location.reload();
+      return true;
+    } catch (error) {
+      showToast(errorMessage(error), 'error');
+      return false;
+    }
+  }, [showToast]);
+
   const actions = useMemo<AppActions>(
     () => ({
       completeOnboarding,
@@ -620,6 +637,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       refreshStorageInfo,
       retryInitialization,
       retryLogLoad,
+      resetAllData,
     }),
     [
       completeOnboarding,
@@ -637,6 +655,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       refreshStorageInfo,
       retryInitialization,
       retryLogLoad,
+      resetAllData,
     ],
   );
 

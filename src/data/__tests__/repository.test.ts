@@ -171,6 +171,33 @@ describe('IndexedDbRepository', () => {
     expect((await reopened.listFoods()).length).toBe(initialCount - 1);
   });
 
+  it('deletes all app data and re-seeds a fresh database on reset', async () => {
+    dbName = `calorie-test-reset-${Date.now()}-${Math.random()}`;
+    const repo = createRepository();
+    await repo.initialize();
+    const food = (await repo.listFoods())[0]!;
+    await repo.saveProfile(profile);
+    await repo.saveTargetSettings(settings);
+
+    const log = makeLog();
+    log.meals.breakfast.push(
+      createFoodEntry(food, {
+        grams: 100,
+        enteredQuantity: 100,
+        enteredUnit: 'g',
+      }),
+    );
+    await repo.saveDailyLog(log);
+
+    await repo.resetAllData();
+    await repo.initialize();
+
+    expect(await repo.getProfile()).toBeNull();
+    expect((await repo.getDailyLog('2026-11-13'))).toBeNull();
+    expect((await repo.getTargetSettings()).mode).toBe('auto');
+    expect((await repo.listFoods()).length).toBeGreaterThan(50);
+  });
+
   it('reports corrupted stored data instead of silently overwriting it', async () => {
     dbName = `calorie-test-integrity-${Date.now()}-${Math.random()}`;
     const repo = createRepository();

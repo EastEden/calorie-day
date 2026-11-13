@@ -51,6 +51,7 @@ export interface CalorieRepository {
   deleteFood(foodId: string): Promise<void>;
   getDailyLog(date: string): Promise<DailyLog | null>;
   saveDailyLog(log: DailyLog): Promise<DailyLog>;
+  resetAllData(): Promise<void>;
 }
 
 export class StorageError extends Error {
@@ -205,6 +206,56 @@ export class IndexedDbRepository implements CalorieRepository {
     db?.close();
     this.dbPromise = null;
     this.initPromise = null;
+  }
+
+  /**
+   * Deletes the app's IndexedDB database. Only for local testing tools:
+   * the next initialization creates a fresh database with seed foods.
+   */
+  async resetAllData(): Promise<void> {
+    await this.close();
+
+    if (typeof indexedDB === 'undefined') {
+      throw new StorageError('当前浏览器不支持本地数据库，无法重置。');
+    }
+
+    await new Promise<void>((resolve, reject) => {
+      let settled = false;
+      const request = indexedDB.deleteDatabase(this.dbName);
+
+      const rejectOnce = (error: StorageError) => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        reject(error);
+      };
+
+      request.onsuccess = () => {
+        if (settled) {
+          return;
+        }
+        settled = true;
+        resolve();
+      };
+
+      request.onerror = () => {
+        rejectOnce(
+          new StorageError(
+            '无法重置本地数据，请稍后重试。',
+            request.error,
+          ),
+        );
+      };
+
+      request.onblocked = () => {
+        rejectOnce(
+          new StorageError(
+            '无法重置：另一个标签页仍在使用本地数据。请关闭其他“每日热量”标签页后再试。',
+          ),
+        );
+      };
+    });
   }
 
   private getDb(): Promise<IDBDatabase> {
