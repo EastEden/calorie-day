@@ -12,6 +12,7 @@ import { DayToolbar } from './DayToolbar';
 import { EntryEditorModal } from './EntryEditorModal';
 import { MacroOverview } from './MacroOverview';
 import { MealCard } from './MealCard';
+import { QuickCoffeeModal } from './QuickCoffeeModal';
 import { QuickOilModal } from './QuickOilModal';
 
 interface DiaryPageProps {
@@ -52,11 +53,13 @@ export function DiaryPage({ onShare }: DiaryPageProps) {
     actions,
   } = useApp();
   const [addMeal, setAddMeal] = useState<MealType | null>(null);
+  const [quickCoffeeOpen, setQuickCoffeeOpen] = useState(false);
   const [quickOilMeal, setQuickOilMeal] = useState<MealType | null>(null);
   const [editing, setEditing] = useState<EditingEntry | null>(null);
 
   useEffect(() => {
     setAddMeal(null);
+    setQuickCoffeeOpen(false);
     setQuickOilMeal(null);
     setEditing(null);
   }, [selectedDate]);
@@ -125,7 +128,13 @@ export function DiaryPage({ onShare }: DiaryPageProps) {
                   summary={summary.byMeal[mealType]}
                   disabled={mealsDisabled}
                   onAdd={() => setAddMeal(mealType)}
-                  onQuickOil={() => setQuickOilMeal(mealType)}
+                  onQuickAction={(action) => {
+                    if (action === 'coffee') {
+                      setQuickCoffeeOpen(true);
+                    } else {
+                      setQuickOilMeal(mealType);
+                    }
+                  }}
                   onEdit={(entry) => setEditing({ mealType, entry })}
                 />
               ))}
@@ -140,9 +149,14 @@ export function DiaryPage({ onShare }: DiaryPageProps) {
         onClose={() => setAddMeal(null)}
       />
 
+      <QuickCoffeeModal
+        open={quickCoffeeOpen}
+        onClose={() => setQuickCoffeeOpen(false)}
+      />
+
       <QuickOilModal
         open={quickOilMeal !== null}
-        mealType={quickOilMeal ?? 'breakfast'}
+        mealType={quickOilMeal ?? 'lunch'}
         onClose={() => setQuickOilMeal(null)}
       />
 

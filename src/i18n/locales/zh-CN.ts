@@ -228,6 +228,32 @@ export const zhCN = {
   'quickOil.noOilsHint': '添加后回到这里，即可快速记录用油。',
   'quickOil.noSelection': '请选择一种食用油。',
 
+  // Quick coffee
+  'quickCoffee.button': '快速咖啡',
+  'quickCoffee.short': '咖啡',
+  'quickCoffee.aria': '为{{meal}}快速记录咖啡',
+  'quickCoffee.title': '快速记录咖啡',
+  'quickCoffee.description':
+    '为{{meal}}记录一杯黑咖啡，可按常见份量加入配料。',
+  'quickCoffee.base': '黑咖啡',
+  'quickCoffee.baseDetail': '1 杯 · 240g · {{kcal}} kcal',
+  'quickCoffee.addons': '可选配料',
+  'quickCoffee.optionDetail': '1 份 · {{grams}}g · {{kcal}} kcal',
+  'quickCoffee.portionHint':
+    '每项按 1 份计算：牛奶 30g、糖 5g、代糖 1g、咖啡奶油 10g。',
+  'quickCoffee.milk': '牛奶',
+  'quickCoffee.sugar': '糖',
+  'quickCoffee.sweetener': '代糖',
+  'quickCoffee.cream': '咖啡奶油',
+  'quickCoffee.preview': '本次摄入',
+  'quickCoffee.previewDetail':
+    '{{grams}}g · 碳水 {{carbs}}g · 蛋白 {{protein}}g · 脂肪 {{fat}}g',
+  'quickCoffee.submit': '加入{{meal}}',
+  'quickCoffee.cup': '杯',
+  'quickCoffee.blackName': '黑咖啡',
+  'quickCoffee.nameWithAddons': '咖啡（{{addons}}）',
+  'quickCoffee.separator': '、',
+
   // Entry editor
   'entry.title': '编辑记录',
   'entry.description': '{{meal}} · {{name}} · 当前 {{kcal}} kcal',

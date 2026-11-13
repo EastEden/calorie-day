@@ -616,7 +616,7 @@
   gap: 4px;
 }
 
-.meal-card__oil {
+.meal-card__quick {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -625,10 +625,8 @@
   height: 31px;
   padding: 0 8px;
   flex: none;
-  border: 1px solid #efdfc7;
+  border: 1px solid var(--line);
   border-radius: var(--radius-pill);
-  background: var(--orange-soft);
-  color: #a86a2d;
   font-size: 9.5px;
   font-weight: 680;
   white-space: nowrap;
@@ -637,12 +635,29 @@
     border-color 0.18s ease;
 }
 
-.meal-card__oil:hover:not(:disabled) {
+.meal-card__quick--oil {
+  border-color: #efdfc7;
+  background: var(--orange-soft);
+  color: #a86a2d;
+}
+
+.meal-card__quick--oil:hover:not(:disabled) {
   border-color: #e4c9a4;
   background: #f8e7d1;
 }
 
-.meal-card__oil:disabled {
+.meal-card__quick--coffee {
+  border-color: #d9e5d9;
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.meal-card__quick--coffee:hover:not(:disabled) {
+  border-color: #c2d8c5;
+  background: #dcebdc;
+}
+
+.meal-card__quick:disabled {
   opacity: 0.45;
 }
 
@@ -704,6 +719,74 @@
 .quick-oil__empty small {
   color: var(--muted-soft);
   font-size: 10px;
+}
+
+.quick-coffee {
+  display: grid;
+  gap: 16px;
+}
+
+.quick-coffee__base {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 13px 14px;
+  border: 1px solid #d9e5d9;
+  border-radius: var(--radius-md);
+  background: var(--green-faint);
+}
+
+.quick-coffee__base-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  border-radius: 12px;
+  background: var(--green-soft);
+  color: var(--green);
+}
+
+.quick-coffee__base div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.quick-coffee__base strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.quick-coffee__base small {
+  color: var(--muted);
+  font-size: 10.5px;
+}
+
+.quick-coffee__options {
+  display: grid;
+  gap: 8px;
+}
+
+.quick-coffee__option {
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--surface);
+}
+
+.quick-coffee__option.is-selected {
+  border-color: #bcd4c0;
+  background: var(--green-faint);
+}
+
+.quick-coffee__option > span {
+  gap: 1px;
+}
+
+.quick-coffee__option strong {
+  font-size: 12px;
 }
 
 .meal-card__macros {
@@ -1205,13 +1288,13 @@
     height: 13px;
   }
 
-  .meal-card__oil {
+  .meal-card__quick {
     min-width: 29px;
     height: 29px;
     padding: 0 7px;
   }
 
-  .meal-card__oil svg {
+  .meal-card__quick svg {
     width: 13px;
     height: 13px;
   }
