@@ -1,4 +1,5 @@
 import type { MacroEnergyBreakdown } from '../domain/types';
+import { useI18n } from '../i18n';
 
 export const MACRO_COLORS = {
   protein: '#d97757',
@@ -19,10 +20,11 @@ export function MacroDonut({
   macroEnergy,
   size = 170,
   stroke = 17,
-  centerLabel = '营养占比',
+  centerLabel,
   centerValue,
   className = '',
 }: MacroDonutProps) {
+  const { t } = useI18n();
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
   const center = size / 2;
@@ -59,10 +61,12 @@ export function MacroDonut({
       role="img"
       aria-label={
         hasData
-          ? `碳水 ${Math.round(macroEnergy.carbsPercent)}%，蛋白质 ${Math.round(
-              macroEnergy.proteinPercent,
-            )}%，脂肪 ${Math.round(macroEnergy.fatPercent)}%`
-          : '暂无营养数据'
+          ? t('macro.donutAria', {
+              carbs: Math.round(macroEnergy.carbsPercent),
+              protein: Math.round(macroEnergy.proteinPercent),
+              fat: Math.round(macroEnergy.fatPercent),
+            })
+          : t('macro.donutEmpty')
       }
     >
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
@@ -94,7 +98,7 @@ export function MacroDonut({
       </svg>
       <div className="macro-donut__center">
         {centerValue && <strong>{centerValue}</strong>}
-        <span>{centerLabel}</span>
+        <span>{centerLabel ?? t('macro.centerLabel')}</span>
       </div>
     </div>
   );

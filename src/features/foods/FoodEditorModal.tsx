@@ -1,6 +1,5 @@
 import {
   useEffect,
-  useMemo,
   useState,
   type FormEvent,
 } from 'react';
@@ -14,12 +13,13 @@ import type {
   FoodCategory,
 } from '../../domain/types';
 import {
-  FOOD_BASIS_LABELS,
+  FOOD_BASIS_LABEL_KEYS,
   FOOD_CATEGORIES,
-  FOOD_CATEGORY_LABELS,
-  FOOD_SOURCE_LABELS,
+  FOOD_CATEGORY_LABEL_KEYS,
+  FOOD_SOURCE_LABEL_KEYS,
 } from '../../domain/constants';
 import { createId } from '../../domain/id';
+import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { Button } from '../../ui/Button';
 import { Modal } from '../../ui/Modal';
@@ -58,6 +58,7 @@ export function FoodEditorModal({
   food,
   onClose,
 }: FoodEditorModalProps) {
+  const { t } = useI18n();
   const { actions, isSaving } = useApp();
   const [name, setName] = useState('');
   const [category, setCategory] = useState<FoodCategory>('protein');
@@ -93,29 +94,27 @@ export function FoodEditorModal({
     setDeleteError(null);
   }, [open, food]);
 
-  const title = food ? '编辑食物' : '添加自定义食物';
+  const title = food ? t('foodEditor.titleEdit') : t('foodEditor.titleAdd');
+  const sourceLabel = food
+    ? t(FOOD_SOURCE_LABEL_KEYS[food.source])
+    : null;
   const description = food
-    ? `${FOOD_SOURCE_LABELS[food.source]}食物 · 修改不会影响已经记录的历史数据`
-    : '营养数据按每 100g 填写，保存后可在记录食物时直接使用。';
-
-  const sourceLabel = useMemo(
-    () => (food ? FOOD_SOURCE_LABELS[food.source] : null),
-    [food],
-  );
+    ? t('foodEditor.descriptionEdit', { source: sourceLabel ?? '' })
+    : t('foodEditor.descriptionAdd');
 
   const validate = (): FieldErrors => {
     const next: FieldErrors = {};
     if (!name.trim()) {
-      next.name = '请输入食物名称。';
+      next.name = t('foodEditor.nameRequired');
     } else if (name.trim().length > 80) {
-      next.name = '食物名称不能超过 80 个字符。';
+      next.name = t('foodEditor.nameTooLong');
     }
 
     const numericFields = [
-      { label: '热量', value: kcal },
-      { label: '蛋白质', value: protein },
-      { label: '碳水', value: carbs },
-      { label: '脂肪', value: fat },
+      { labelKey: 'common.calories' as const, value: kcal },
+      { labelKey: 'common.protein' as const, value: protein },
+      { labelKey: 'common.carbs' as const, value: carbs },
+      { labelKey: 'common.fat' as const, value: fat },
     ];
 
     for (const field of numericFields) {
@@ -125,14 +124,16 @@ export function FoodEditorModal({
         !Number.isFinite(parsed) ||
         parsed < 0
       ) {
-        next.nutrition = `${field.label}必须是非负数字。`;
+        next.nutrition = t('foodEditor.invalidNutrition', {
+          field: t(field.labelKey),
+        });
         break;
       }
     }
 
     for (const serving of servings) {
       if (!serving.label.trim()) {
-        next.servings = '每个常用份量都需要名称。';
+        next.servings = t('foodEditor.servingNameRequired');
         break;
       }
       const gramsValue = Number(serving.grams);
@@ -141,7 +142,7 @@ export function FoodEditorModal({
         !Number.isFinite(gramsValue) ||
         gramsValue <= 0
       ) {
-        next.servings = '常用份量对应的克数必须大于 0。';
+        next.servings = t('foodEditor.servingGramsRequired');
         break;
       }
     }
@@ -183,7 +184,10 @@ export function FoodEditorModal({
       onClose();
     } catch (error) {
       setErrors({
-        form: error instanceof Error ? error.message : '保存失败，请重试。',
+        form:
+          error instanceof Error
+            ? error.message
+            : t('foodEditor.saveFailed'),
       });
     } finally {
       setSubmitting(false);
@@ -201,7 +205,9 @@ export function FoodEditorModal({
       onClose();
     } catch (error) {
       setDeleteError(
-        error instanceof Error ? error.message : '删除失败，请重试。',
+        error instanceof Error
+          ? error.message
+          : t('foodEditor.deleteFailed'),
       );
     } finally {
       setDeleting(false);
@@ -235,8 +241,12 @@ export function FoodEditorModal({
       description={description}
       footer={
         <>
-          <Button variant="ghost" onClick={handleClose} disabled={submitting || deleting}>
-            取消
+          <Button
+            variant="ghost"
+            onClick={handleClose}
+            disabled={submitting || deleting}
+          >
+            {t('common.cancel')}
           </Button>
           <Button
             type="submit"
@@ -244,20 +254,25 @@ export function FoodEditorModal({
             loading={submitting}
             disabled={deleting}
           >
-            {food ? '保存修改' : '添加到食物库'}
+            {food ? t('foodEditor.saveEdit') : t('foodEditor.add')}
           </Button>
         </>
       }
     >
-      <form id="food-editor-form" className="food-editor" onSubmit={handleSubmit} noValidate>
+      <form
+        id="food-editor-form"
+        className="food-editor"
+        onSubmit={handleSubmit}
+        noValidate
+      >
         <div className="food-editor__top">
           <label className="field field--grow">
-            <span className="field-label">食物名称</span>
+            <span className="field-label">{t('foodEditor.name')}</span>
             <input
               type="text"
               value={name}
               maxLength={80}
-              placeholder="例如：自制鸡胸肉丸"
+              placeholder={t('foodEditor.namePlaceholder')}
               onChange={(event) => {
                 setName(event.target.value);
                 setErrors((current) => ({ ...current, name: undefined }));
@@ -273,46 +288,52 @@ export function FoodEditorModal({
         </div>
 
         <fieldset className="form-section form-section--plain">
-          <legend className="field-label">分类</legend>
+          <legend className="field-label">{t('foodEditor.category')}</legend>
           <div className="filter-chips">
             {FOOD_CATEGORIES.map((item) => (
               <button
                 type="button"
                 key={item}
-                className={`filter-chip ${category === item ? 'is-active' : ''}`}
+                className={`filter-chip ${
+                  category === item ? 'is-active' : ''
+                }`}
                 onClick={() => setCategory(item)}
               >
-                {FOOD_CATEGORY_LABELS[item]}
+                {t(FOOD_CATEGORY_LABEL_KEYS[item])}
               </button>
             ))}
           </div>
         </fieldset>
 
         <fieldset className="form-section form-section--plain">
-          <legend className="field-label">营养基准</legend>
-          <div className="segmented segmented--wide" role="group" aria-label="营养基准">
+          <legend className="field-label">{t('foodEditor.basis')}</legend>
+          <div
+            className="segmented segmented--wide"
+            role="group"
+            aria-label={t('foodEditor.basis')}
+          >
             {BASIS_OPTIONS.map((option) => (
               <button
                 type="button"
                 key={option}
-                className={`segmented__option ${basis === option ? 'is-active' : ''}`}
+                className={`segmented__option ${
+                  basis === option ? 'is-active' : ''
+                }`}
                 aria-pressed={basis === option}
                 onClick={() => setBasis(option)}
               >
-                {FOOD_BASIS_LABELS[option]}
+                {t(FOOD_BASIS_LABEL_KEYS[option])}
               </button>
             ))}
           </div>
-          <p className="field-hint">
-            第一版统一使用未烹饪基准：生重、干重或商品可食部。
-          </p>
+          <p className="field-hint">{t('foodEditor.basisHint')}</p>
         </fieldset>
 
         <fieldset className="form-section form-section--plain">
-          <legend className="field-label">每 100g 营养</legend>
+          <legend className="field-label">{t('foodEditor.per100')}</legend>
           <div className="nutrition-input-grid">
             <label className="field">
-              <span>热量</span>
+              <span>{t('common.calories')}</span>
               <span className="input-with-suffix">
                 <input
                   type="number"
@@ -323,14 +344,17 @@ export function FoodEditorModal({
                   placeholder="0"
                   onChange={(event) => {
                     setKcal(event.target.value);
-                    setErrors((current) => ({ ...current, nutrition: undefined }));
+                    setErrors((current) => ({
+                      ...current,
+                      nutrition: undefined,
+                    }));
                   }}
                 />
-                <span>kcal</span>
+                <span>{t('common.kcal')}</span>
               </span>
             </label>
             <label className="field">
-              <span>蛋白质</span>
+              <span>{t('common.protein')}</span>
               <span className="input-with-suffix">
                 <input
                   type="number"
@@ -341,14 +365,17 @@ export function FoodEditorModal({
                   placeholder="0"
                   onChange={(event) => {
                     setProtein(event.target.value);
-                    setErrors((current) => ({ ...current, nutrition: undefined }));
+                    setErrors((current) => ({
+                      ...current,
+                      nutrition: undefined,
+                    }));
                   }}
                 />
-                <span>g</span>
+                <span>{t('common.gram')}</span>
               </span>
             </label>
             <label className="field">
-              <span>碳水</span>
+              <span>{t('common.carbs')}</span>
               <span className="input-with-suffix">
                 <input
                   type="number"
@@ -359,14 +386,17 @@ export function FoodEditorModal({
                   placeholder="0"
                   onChange={(event) => {
                     setCarbs(event.target.value);
-                    setErrors((current) => ({ ...current, nutrition: undefined }));
+                    setErrors((current) => ({
+                      ...current,
+                      nutrition: undefined,
+                    }));
                   }}
                 />
-                <span>g</span>
+                <span>{t('common.gram')}</span>
               </span>
             </label>
             <label className="field">
-              <span>脂肪</span>
+              <span>{t('common.fat')}</span>
               <span className="input-with-suffix">
                 <input
                   type="number"
@@ -377,10 +407,13 @@ export function FoodEditorModal({
                   placeholder="0"
                   onChange={(event) => {
                     setFat(event.target.value);
-                    setErrors((current) => ({ ...current, nutrition: undefined }));
+                    setErrors((current) => ({
+                      ...current,
+                      nutrition: undefined,
+                    }));
                   }}
                 />
-                <span>g</span>
+                <span>{t('common.gram')}</span>
               </span>
             </label>
           </div>
@@ -391,7 +424,9 @@ export function FoodEditorModal({
 
         <fieldset className="form-section form-section--plain">
           <div className="form-section__title-row">
-            <legend className="field-label">常用份量（可选）</legend>
+            <legend className="field-label">
+              {t('foodEditor.servings')}
+            </legend>
             <button
               type="button"
               className="text-button"
@@ -400,16 +435,17 @@ export function FoodEditorModal({
                   ...current,
                   { key: createId('serving-row'), label: '', grams: '' },
                 ]);
-                setErrors((current) => ({ ...current, servings: undefined }));
+                setErrors((current) => ({
+                  ...current,
+                  servings: undefined,
+                }));
               }}
             >
               <Plus size={15} aria-hidden="true" />
-              添加份量
+              {t('foodEditor.addServing')}
             </button>
           </div>
-          <p className="field-hint">
-            例如“个 · 50g”或“杯 · 250g”。记录时可以按份填写，也可以继续按克填写。
-          </p>
+          <p className="field-hint">{t('foodEditor.servingHint')}</p>
           {servings.length > 0 && (
             <div className="serving-editor">
               {servings.map((serving) => (
@@ -417,12 +453,12 @@ export function FoodEditorModal({
                   <input
                     type="text"
                     value={serving.label}
-                    placeholder="名称，如：个"
+                    placeholder={t('foodEditor.servingNamePlaceholder')}
                     maxLength={24}
                     onChange={(event) =>
                       updateServing(serving.key, 'label', event.target.value)
                     }
-                    aria-label="份量名称"
+                    aria-label={t('foodEditor.servingNameAria')}
                   />
                   <span className="serving-editor__times">=</span>
                   <input
@@ -431,13 +467,15 @@ export function FoodEditorModal({
                     min={0}
                     step="any"
                     value={serving.grams}
-                    placeholder="克数"
+                    placeholder={t('foodEditor.servingGramsPlaceholder')}
                     onChange={(event) =>
                       updateServing(serving.key, 'grams', event.target.value)
                     }
-                    aria-label="每份克数"
+                    aria-label={t('foodEditor.servingGramsAria')}
                   />
-                  <span className="serving-editor__unit">g</span>
+                  <span className="serving-editor__unit">
+                    {t('common.gram')}
+                  </span>
                   <button
                     type="button"
                     className="icon-button icon-button--muted"
@@ -446,7 +484,7 @@ export function FoodEditorModal({
                         current.filter((item) => item.key !== serving.key),
                       )
                     }
-                    aria-label="删除这个份量"
+                    aria-label={t('foodEditor.deleteServingAria')}
                   >
                     <Trash2 size={16} />
                   </button>
@@ -475,13 +513,11 @@ export function FoodEditorModal({
                 disabled={submitting}
               >
                 <Trash2 size={15} aria-hidden="true" />
-                删除这个食物
+                {t('foodEditor.deleteFood')}
               </button>
             ) : (
               <div className="delete-confirm">
-                <p>
-                  删除后它会从食物库消失，但已经记录的每日数据不会变化。确定吗？
-                </p>
+                <p>{t('foodEditor.deleteConfirm')}</p>
                 {deleteError && (
                   <p className="form-error" role="alert">
                     {deleteError}
@@ -494,7 +530,7 @@ export function FoodEditorModal({
                     onClick={() => setConfirmDelete(false)}
                     disabled={deleting}
                   >
-                    取消
+                    {t('common.cancel')}
                   </Button>
                   <Button
                     variant="danger"
@@ -502,7 +538,7 @@ export function FoodEditorModal({
                     loading={deleting}
                     onClick={() => void handleDelete()}
                   >
-                    确认删除
+                    {t('foodEditor.confirmDelete')}
                   </Button>
                 </div>
               </div>

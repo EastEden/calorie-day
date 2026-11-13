@@ -1,6 +1,7 @@
 import type { DaySummary, IsoDate } from '../../domain/types';
 import { formatKcal } from '../../domain/formatters';
 import { isToday } from '../../domain/dates';
+import { useI18n } from '../../i18n';
 
 interface CalorieHeroProps {
   summary: DaySummary;
@@ -8,6 +9,7 @@ interface CalorieHeroProps {
 }
 
 export function CalorieHero({ summary, date }: CalorieHeroProps) {
+  const { t } = useI18n();
   const target = summary.target;
   const remaining = summary.remainingKcal;
   const progress = target ? Math.round(summary.calorieProgress) : 0;
@@ -21,20 +23,22 @@ export function CalorieHero({ summary, date }: CalorieHeroProps) {
       <div className="calorie-hero__glow" aria-hidden="true" />
       <div className="calorie-hero__content">
         <div className="calorie-hero__eyebrow" id="calorie-hero-title">
-          {isToday(date) ? '今日已摄入' : '当日已摄入'}
+          {isToday(date) ? t('diary.intakeToday') : t('diary.intakeSelected')}
           <span className="calorie-hero__dot" aria-hidden="true" />
-          {summary.entryCount > 0 ? `${summary.entryCount} 项食物` : '等待第一笔记录'}
+          {summary.entryCount > 0
+            ? t('common.foodCount', { n: summary.entryCount })
+            : t('diary.waitingFirst')}
         </div>
 
         <div className="calorie-hero__number">
           <strong>{formatKcal(summary.totals.kcal)}</strong>
-          <span>kcal</span>
+          <span>{t('common.kcal')}</span>
         </div>
 
         <div className="calorie-hero__target">
           {target
-            ? `推荐目标 ${formatKcal(target.kcal)} kcal`
-            : '完善个人资料后生成推荐目标'}
+            ? t('diary.target', { kcal: formatKcal(target.kcal) })
+            : t('diary.targetMissing')}
         </div>
 
         {target && remaining !== null && (
@@ -44,14 +48,17 @@ export function CalorieHero({ summary, date }: CalorieHeroProps) {
             }`}
           >
             {remaining >= 0
-              ? `还可摄入 ${formatKcal(remaining)} kcal`
-              : `已超出 ${formatKcal(Math.abs(remaining))} kcal`}
+              ? t('diary.remaining', { kcal: formatKcal(remaining) })
+              : t('diary.over', { kcal: formatKcal(Math.abs(remaining)) })}
           </div>
         )}
       </div>
 
       {target && (
-        <div className="calorie-hero__ring" aria-label={`目标完成 ${progress}%`}>
+        <div
+          className="calorie-hero__ring"
+          aria-label={t('diary.progressAria', { percent: progress })}
+        >
           <svg viewBox="0 0 112 112" aria-hidden="true">
             <circle
               cx="56"
@@ -75,7 +82,7 @@ export function CalorieHero({ summary, date }: CalorieHeroProps) {
           </svg>
           <div className="calorie-hero__ring-label">
             <strong>{progress}%</strong>
-            <span>目标</span>
+            <span>{t('diary.goal')}</span>
           </div>
         </div>
       )}

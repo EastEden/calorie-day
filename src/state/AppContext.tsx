@@ -18,6 +18,7 @@ import {
   FOOD_CATEGORIES,
   MEAL_META,
 } from '../domain/constants';
+import { translate } from '../i18n';
 import {
   getTodayIso,
   isFutureDate,
@@ -118,7 +119,7 @@ function errorMessage(error: unknown): string {
   if (error instanceof Error && error.message) {
     return error.message;
   }
-  return '操作失败，请稍后重试。';
+  return translate('app.unexpectedError');
 }
 
 function sortFoods(foods: Food[]): Food[] {
@@ -309,12 +310,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const log = currentLogRef.current;
 
       if (!log) {
-        showToast('记录还没有准备好，请稍后再试。', 'info');
+        showToast(translate('toast.recordsNotReady'), 'info');
         return false;
       }
 
       if (savingRef.current) {
-        showToast('正在保存，请稍等。', 'info');
+        showToast(translate('toast.savingWait'), 'info');
         return false;
       }
 
@@ -380,7 +381,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         );
         setProfile(nextProfile);
         setTargetSettings(nextSettings);
-        showToast('推荐目标已生成，开始记录吧。');
+        showToast(translate('toast.targetGenerated'));
         return true;
       } catch (error) {
         showToast(errorMessage(error), 'error');
@@ -399,7 +400,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }) as UserProfile;
         const saved = await repository.saveProfile(nextProfile);
         setProfile(saved);
-        showToast('个人资料已更新。');
+        showToast(translate('toast.profileUpdated'));
         return true;
       } catch (error) {
         showToast(errorMessage(error), 'error');
@@ -419,7 +420,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const saved = await repository.saveTargetSettings(nextSettings);
         setTargetSettings(saved);
         showToast(
-          saved.mode === 'manual' ? '手动目标已保存。' : '已恢复自动推荐目标。',
+          saved.mode === 'manual'
+            ? translate('toast.manualTargetSaved')
+            : translate('toast.autoTargetRestored'),
         );
         return true;
       } catch (error) {
@@ -439,7 +442,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const entry = createFoodEntry(food, amount);
       return persistLogUpdate(
         (log) => addEntryToMeal(log, mealType, entry),
-        `已加入${MEAL_META[mealType].label}`,
+        translate('toast.mealAdded', {
+          meal: translate(MEAL_META[mealType].labelKey),
+        }),
       );
     },
     [persistLogUpdate],
@@ -453,7 +458,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     ): Promise<boolean> =>
       persistLogUpdate(
         (log) => updateEntryInLog(log, mealType, entryId, amount),
-        '份量已更新。',
+        translate('toast.servingUpdated'),
       ),
     [persistLogUpdate],
   );
@@ -462,7 +467,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async (mealType: MealType, entryId: string): Promise<boolean> =>
       persistLogUpdate(
         (log) => deleteEntryFromLog(log, mealType, entryId),
-        '记录已删除。',
+        translate('toast.entryDeleted'),
       ),
     [persistLogUpdate],
   );
@@ -489,7 +494,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const saved = await repository.saveFood(nextFood);
         setFoods((current) => sortFoods([...current, saved]));
-        showToast(`已添加“${saved.name}”。`);
+        showToast(translate('toast.foodAdded', { name: saved.name }));
         return saved;
       } catch (error) {
         throw new Error(errorMessage(error));
@@ -502,7 +507,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async (foodId: string, draft: FoodDraft): Promise<Food> => {
       const existing = foods.find((food) => food.id === foodId);
       if (!existing) {
-        throw new Error('没有找到要修改的食物。');
+        throw new Error(translate('toast.noFoodToUpdate'));
       }
 
       const nextFood = foodSchema.parse({
@@ -524,7 +529,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setFoods((current) =>
           sortFoods(current.map((food) => (food.id === saved.id ? saved : food))),
         );
-        showToast(`“${saved.name}”已更新。`);
+        showToast(translate('toast.foodUpdated', { name: saved.name }));
         return saved;
       } catch (error) {
         throw new Error(errorMessage(error));
@@ -538,7 +543,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         await repository.deleteFood(foodId);
         setFoods((current) => current.filter((food) => food.id !== foodId));
-        showToast('食物已从食物库删除，历史记录不受影响。');
+        showToast(translate('toast.foodDeleted'));
       } catch (error) {
         throw new Error(errorMessage(error));
       }
@@ -567,11 +572,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const selectDate = useCallback(
     (date: IsoDate) => {
       if (!isValidIsoDate(date)) {
-        showToast('日期格式不正确。', 'error');
+        showToast(translate('toast.dateInvalid'), 'error');
         return;
       }
       if (isFutureDate(date)) {
-        showToast('还不能记录未来日期。', 'info');
+        showToast(translate('toast.futureDate'), 'info');
         return;
       }
       setSelectedDate((current) => (current === date ? current : date));
@@ -584,12 +589,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const info = await getStorageInfo(true);
       setStorageInfo(info);
       if (info.persisted) {
-        showToast('浏览器已启用持久存储。');
+        showToast(translate('toast.persistenceEnabled'));
       } else {
-        showToast(
-          '浏览器暂未授予持久存储。数据仍会写入本机，但清理站点数据会丢失。',
-          'info',
-        );
+        showToast(translate('toast.persistenceDenied'), 'info');
       }
     } catch (error) {
       showToast(errorMessage(error), 'error');
@@ -606,7 +608,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const resetAllData = useCallback(async (): Promise<boolean> => {
     if (savingRef.current) {
-      showToast('正在保存，请稍后再试。', 'info');
+      showToast(translate('toast.saveInProgress'), 'info');
       return false;
     }
 

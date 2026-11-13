@@ -4,6 +4,7 @@ import {
   type ReactNode,
 } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { translate } from '../i18n';
 import { BrandMark } from './BrandMark';
 
 interface AppErrorBoundaryProps {
@@ -40,13 +41,10 @@ export class AppErrorBoundary extends Component<
           <span className="app-status-screen__error-icon">
             <AlertTriangle size={26} aria-hidden="true" />
           </span>
-          <h1>页面遇到了一个意外错误</h1>
-          <p>
-            你的本地记录仍然保存在浏览器数据库中，不会因为这次错误被清空。
-          </p>
+          <h1>{translate('app.errorTitle')}</h1>
+          <p>{translate('app.errorBody')}</p>
           <p className="app-status-screen__hint">
-            请重新加载页面。如果问题持续出现，可以先把当前浏览器窗口保持打开，
-            并联系开发者排查。
+            {translate('app.errorHint')}
           </p>
           <button
             type="button"
@@ -54,7 +52,7 @@ export class AppErrorBoundary extends Component<
             onClick={() => window.location.reload()}
           >
             <RefreshCw size={16} aria-hidden="true" />
-            <span>重新加载</span>
+            <span>{translate('app.reload')}</span>
           </button>
         </div>
       );

@@ -6,6 +6,7 @@ import { Trash2 } from 'lucide-react';
 import type { FoodEntry, MealType } from '../../domain/types';
 import { MEAL_META } from '../../domain/constants';
 import { formatKcal } from '../../domain/formatters';
+import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { Button } from '../../ui/Button';
 import { Modal } from '../../ui/Modal';
@@ -24,6 +25,7 @@ export function EntryEditorModal({
   entry,
   onClose,
 }: EntryEditorModalProps) {
+  const { t } = useI18n();
   const { actions, isSaving } = useApp();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -75,11 +77,11 @@ export function EntryEditorModal({
       if (ok) {
         onClose();
       } else {
-        setDeleteError('删除失败，请重试。');
+        setDeleteError(t('entry.deleteFailed'));
       }
     } catch (error) {
       setDeleteError(
-        error instanceof Error ? error.message : '删除失败，请重试。',
+        error instanceof Error ? error.message : t('entry.deleteFailed'),
       );
     } finally {
       setDeleting(false);
@@ -90,17 +92,21 @@ export function EntryEditorModal({
     <Modal
       open={open}
       onClose={handleClose}
-      title="编辑记录"
-      description={`${MEAL_META[mealType].label} · ${entry.foodName} · 当前 ${formatKcal(
-        (entry.nutritionPer100gSnapshot.kcal * entry.amountGrams) / 100,
-      )} kcal`}
+      title={t('entry.title')}
+      description={t('entry.description', {
+        meal: t(MEAL_META[mealType].labelKey),
+        name: entry.foodName,
+        kcal: formatKcal(
+          (entry.nutritionPer100gSnapshot.kcal * entry.amountGrams) / 100,
+        ),
+      })}
     >
       <PortionForm
         key={entry.id}
         nutritionPer100g={entry.nutritionPer100gSnapshot}
         servings={servings}
         initial={initial}
-        submitLabel="保存份量"
+        submitLabel={t('portion.submit')}
         disabled={isSaving || deleting}
         onSubmit={async (amount) => {
           const ok = await actions.updateEntry(mealType, entry.id, amount);
@@ -119,11 +125,11 @@ export function EntryEditorModal({
                 disabled={isSaving || deleting}
               >
                 <Trash2 size={15} aria-hidden="true" />
-                删除这条记录
+                {t('entry.delete')}
               </button>
             ) : (
               <div className="delete-confirm">
-                <p>删除后这一天会少一条记录，确定吗？</p>
+                <p>{t('entry.deleteConfirm')}</p>
                 {deleteError && (
                   <p className="form-error" role="alert">
                     {deleteError}
@@ -136,7 +142,7 @@ export function EntryEditorModal({
                     onClick={() => setConfirmDelete(false)}
                     disabled={deleting}
                   >
-                    取消
+                    {t('common.cancel')}
                   </Button>
                   <Button
                     variant="danger"
@@ -144,7 +150,7 @@ export function EntryEditorModal({
                     loading={deleting}
                     onClick={() => void handleDelete()}
                   >
-                    确认删除
+                    {t('entry.confirmDelete')}
                   </Button>
                 </div>
               </div>

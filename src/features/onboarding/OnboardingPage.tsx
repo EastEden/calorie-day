@@ -25,6 +25,7 @@ import type {
   ProfileInput,
   Sex,
 } from '../../domain/types';
+import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { BrandMark } from '../../ui/BrandMark';
 import { Button } from '../../ui/Button';
@@ -44,6 +45,7 @@ function parseNumber(value: string): number {
 }
 
 export function OnboardingPage() {
+  const { t } = useI18n();
   const { actions } = useApp();
   const [sex, setSex] = useState<Sex | ''>('');
   const [age, setAge] = useState('');
@@ -95,30 +97,30 @@ export function OnboardingPage() {
     const weightValue = parseNumber(weight);
 
     if (!sex) {
-      next.sex = '请选择生理性别，用于计算基础代谢。';
+      next.sex = t('onboarding.sexRequired');
     }
     if (!Number.isFinite(ageValue) || ageValue < 14 || ageValue > 100) {
-      next.age = '请输入 14–100 之间的年龄。';
+      next.age = t('onboarding.ageError');
     }
     if (
       !Number.isFinite(heightValue) ||
       heightValue < 100 ||
       heightValue > 250
     ) {
-      next.height = '请输入 100–250 cm 之间的身高。';
+      next.height = t('onboarding.heightError');
     }
     if (
       !Number.isFinite(weightValue) ||
       weightValue < 25 ||
       weightValue > 350
     ) {
-      next.weight = '请输入 25–350 kg 之间的体重。';
+      next.weight = t('onboarding.weightError');
     }
     if (!activityLevel) {
-      next.activity = '请选择最接近你日常状态的活动水平。';
+      next.activity = t('onboarding.activityRequired');
     }
     if (!goal) {
-      next.goal = '请选择当前阶段的目标。';
+      next.goal = t('onboarding.goalRequired');
     }
 
     return next;
@@ -162,7 +164,7 @@ export function OnboardingPage() {
     if (!ok) {
       setErrors((current) => ({
         ...current,
-        form: '保存失败，请确认浏览器允许本地存储后再试。',
+        form: t('onboarding.saveFailed'),
       }));
     }
     setSubmitting(false);
@@ -174,7 +176,7 @@ export function OnboardingPage() {
         <div className="onboarding__brand">
           <BrandMark size={42} />
           <div>
-            <strong>每日热量</strong>
+            <strong>{t('app.name')}</strong>
             <span>CALORIE DAY</span>
           </div>
         </div>
@@ -182,82 +184,103 @@ export function OnboardingPage() {
         <div className="onboarding__copy">
           <p className="onboarding__eyebrow">
             <Sparkles size={15} aria-hidden="true" />
-            从今天开始，吃得更明白
+            {t('onboarding.kicker')}
           </p>
           <h1>
-            把每一餐，
+            {t('onboarding.headlineLine1')}
             <br />
-            变成看得见的
-            <em>进步。</em>
+            {t('onboarding.headlineLine2')}
+            <em>{t('onboarding.headlineHighlight')}</em>
           </h1>
-          <p>
-            记录早餐、午餐、晚餐和加餐，了解热量与三大营养素。
-            根据你的身体资料，生成一份真正属于你的每日目标。
-          </p>
+          <p>{t('onboarding.intro')}</p>
         </div>
 
         <div className="onboarding__preview" aria-live="polite">
           <div className="onboarding__preview-top">
-            <span>你的每日推荐</span>
+            <span>{t('onboarding.previewTitle')}</span>
             <span className="onboarding__preview-chip">
-              {preview ? '已可预览' : '待完善资料'}
+              {preview
+                ? t('onboarding.previewReady')
+                : t('onboarding.previewPending')}
             </span>
           </div>
           <div className="onboarding__preview-number">
-            <strong>{preview ? formatKcal(preview.target.kcal) : '—'}</strong>
-            <span>kcal / 天</span>
+            <strong>
+              {preview
+                ? formatKcal(preview.target.kcal)
+                : t('common.notAvailable')}
+            </strong>
+            <span>{t('onboarding.previewUnit')}</span>
           </div>
           <div className="onboarding__preview-macros">
             <div>
-              <span>碳水</span>
+              <span>{t('common.carbs')}</span>
               <strong>
-                {preview ? `${formatDecimal(preview.target.carbsG)}g` : '—'}
+                {preview
+                  ? `${formatDecimal(preview.target.carbsG)}${t(
+                      'common.gram',
+                    )}`
+                  : t('common.notAvailable')}
               </strong>
             </div>
             <div>
-              <span>蛋白质</span>
+              <span>{t('common.protein')}</span>
               <strong>
-                {preview ? `${formatDecimal(preview.target.proteinG)}g` : '—'}
+                {preview
+                  ? `${formatDecimal(preview.target.proteinG)}${t(
+                      'common.gram',
+                    )}`
+                  : t('common.notAvailable')}
               </strong>
             </div>
             <div>
-              <span>脂肪</span>
+              <span>{t('common.fat')}</span>
               <strong>
-                {preview ? `${formatDecimal(preview.target.fatG)}g` : '—'}
+                {preview
+                  ? `${formatDecimal(preview.target.fatG)}${t(
+                      'common.gram',
+                    )}`
+                  : t('common.notAvailable')}
               </strong>
             </div>
           </div>
           {preview && (
             <p className="onboarding__preview-foot">
-              基础代谢约 {formatKcal(preview.bmr)} kcal · 日常消耗约{' '}
-              {formatKcal(preview.tdee)} kcal
+              {t('onboarding.previewFoot', {
+                bmr: formatKcal(preview.bmr),
+                tdee: formatKcal(preview.tdee),
+              })}
             </p>
           )}
         </div>
 
         <p className="onboarding__privacy">
           <LockKeyhole size={14} aria-hidden="true" />
-          资料只保存在这台设备的浏览器中，不会上传。
+          {t('onboarding.privacy')}
         </p>
       </section>
 
       <section className="onboarding__panel">
         <form className="onboarding-form" onSubmit={handleSubmit} noValidate>
           <header className="onboarding-form__header">
-            <p className="eyebrow">只需几步</p>
-            <h2>先认识一下你</h2>
-            <p>我们会用这些资料估算每日消耗与推荐摄入量，之后可以随时修改。</p>
+            <p className="eyebrow">{t('onboarding.formEyebrow')}</p>
+            <h2>{t('onboarding.formTitle')}</h2>
+            <p>{t('onboarding.formDescription')}</p>
           </header>
 
           <fieldset className="form-section">
             <legend className="form-section__legend">
               <span className="step-dot">01</span>
-              基础资料
+              {t('onboarding.sectionBasics')}
             </legend>
 
             <div className="field">
-              <span className="field-label">生理性别</span>
-              <div className="segmented segmented--wide" role="group" aria-label="生理性别">
+              <span className="field-label">{t('profile.sex')}</span>
+              <div
+                className="segmented segmented--wide"
+                role="group"
+                aria-label={t('profile.sex')}
+              >
                 {SEX_OPTIONS.map((option) => (
                   <button
                     key={option.value}
@@ -271,7 +294,7 @@ export function OnboardingPage() {
                       clearError('sex');
                     }}
                   >
-                    {option.label}
+                    {t(option.labelKey)}
                   </button>
                 ))}
               </div>
@@ -280,7 +303,7 @@ export function OnboardingPage() {
 
             <div className="field-row field-row--three">
               <label className="field">
-                <span className="field-label">年龄</span>
+                <span className="field-label">{t('onboarding.ageLabel')}</span>
                 <span className="input-with-suffix">
                   <input
                     type="number"
@@ -294,13 +317,13 @@ export function OnboardingPage() {
                       clearError('age');
                     }}
                   />
-                  <span>岁</span>
+                  <span>{t('common.ageUnit')}</span>
                 </span>
                 {errors.age && <span className="field-error">{errors.age}</span>}
               </label>
 
               <label className="field">
-                <span className="field-label">身高</span>
+                <span className="field-label">{t('onboarding.heightLabel')}</span>
                 <span className="input-with-suffix">
                   <input
                     type="number"
@@ -314,7 +337,7 @@ export function OnboardingPage() {
                       clearError('height');
                     }}
                   />
-                  <span>cm</span>
+                  <span>{t('common.cmUnit')}</span>
                 </span>
                 {errors.height && (
                   <span className="field-error">{errors.height}</span>
@@ -322,7 +345,7 @@ export function OnboardingPage() {
               </label>
 
               <label className="field">
-                <span className="field-label">体重</span>
+                <span className="field-label">{t('onboarding.weightLabel')}</span>
                 <span className="input-with-suffix">
                   <input
                     type="number"
@@ -336,7 +359,7 @@ export function OnboardingPage() {
                       clearError('weight');
                     }}
                   />
-                  <span>kg</span>
+                  <span>{t('common.kgUnit')}</span>
                 </span>
                 {errors.weight && (
                   <span className="field-error">{errors.weight}</span>
@@ -348,7 +371,7 @@ export function OnboardingPage() {
           <fieldset className="form-section">
             <legend className="form-section__legend">
               <span className="step-dot">02</span>
-              日常活动
+              {t('onboarding.sectionActivity')}
             </legend>
             <div className="option-list">
               {ACTIVITY_LEVELS.map((level) => (
@@ -370,8 +393,8 @@ export function OnboardingPage() {
                     )}
                   </span>
                   <span className="option-card__text">
-                    <strong>{level.label}</strong>
-                    <small>{level.description}</small>
+                    <strong>{t(level.labelKey)}</strong>
+                    <small>{t(level.descriptionKey)}</small>
                   </span>
                 </button>
               ))}
@@ -384,7 +407,7 @@ export function OnboardingPage() {
           <fieldset className="form-section">
             <legend className="form-section__legend">
               <span className="step-dot">03</span>
-              当前目标
+              {t('onboarding.sectionGoal')}
             </legend>
             <div className="goal-grid">
               {GOALS.map((option) => (
@@ -400,8 +423,8 @@ export function OnboardingPage() {
                     clearError('goal');
                   }}
                 >
-                  <strong>{option.label}</strong>
-                  <small>{option.description}</small>
+                  <strong>{t(option.labelKey)}</strong>
+                  <small>{t(option.descriptionKey)}</small>
                 </button>
               ))}
             </div>
@@ -416,9 +439,11 @@ export function OnboardingPage() {
 
           <div className="onboarding-form__footer">
             <div className="onboarding-form__summary">
-              <span>每日推荐</span>
+              <span>{t('onboarding.summary')}</span>
               <strong>
-                {preview ? `${formatKcal(preview.target.kcal)} kcal` : '待生成'}
+                {preview
+                  ? `${formatKcal(preview.target.kcal)} ${t('common.kcal')}`
+                  : t('onboarding.pendingTarget')}
               </strong>
             </div>
             <Button
@@ -427,7 +452,7 @@ export function OnboardingPage() {
               loading={submitting}
               icon={<ArrowRight size={18} />}
             >
-              生成目标，开始记录
+              {t('onboarding.submit')}
             </Button>
           </div>
         </form>

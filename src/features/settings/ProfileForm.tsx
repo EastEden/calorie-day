@@ -7,12 +7,9 @@ import { Save } from 'lucide-react';
 import {
   ACTIVITY_LEVELS,
   GOALS,
-  NUTRITION_REFERENCE_NOTE,
   SEX_OPTIONS,
 } from '../../domain/constants';
-import {
-  formatKcal,
-} from '../../domain/formatters';
+import { formatKcal } from '../../domain/formatters';
 import { calculateTargets } from '../../domain/targets';
 import type {
   ActivityLevel,
@@ -20,6 +17,7 @@ import type {
   ProfileInput,
   Sex,
 } from '../../domain/types';
+import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { Button } from '../../ui/Button';
 
@@ -35,6 +33,7 @@ function parseNumber(value: string): number {
 }
 
 export function ProfileForm() {
+  const { t } = useI18n();
   const { profile, actions } = useApp();
   const [sex, setSex] = useState<Sex>(profile?.sex ?? 'female');
   const [age, setAge] = useState(profile ? String(profile.age) : '');
@@ -99,21 +98,21 @@ export function ProfileForm() {
     const next: Errors = {};
 
     if (!Number.isFinite(ageValue) || ageValue < 14 || ageValue > 100) {
-      next.age = '请输入 14–100 之间的年龄。';
+      next.age = t('profile.ageError');
     }
     if (
       !Number.isFinite(heightValue) ||
       heightValue < 100 ||
       heightValue > 250
     ) {
-      next.height = '请输入 100–250 cm 之间的身高。';
+      next.height = t('profile.heightError');
     }
     if (
       !Number.isFinite(weightValue) ||
       weightValue < 25 ||
       weightValue > 350
     ) {
-      next.weight = '请输入 25–350 kg 之间的体重。';
+      next.weight = t('profile.weightError');
     }
     setErrors(next);
     if (Object.keys(next).length > 0) {
@@ -132,7 +131,7 @@ export function ProfileForm() {
     setSaving(true);
     const ok = await actions.saveProfile(input);
     if (!ok) {
-      setErrors({ form: '保存失败，请稍后重试。' });
+      setErrors({ form: t('profile.saveFailed') });
     }
     setSaving(false);
   };
@@ -141,22 +140,28 @@ export function ProfileForm() {
     <section className="settings-card" aria-labelledby="profile-settings-title">
       <header className="settings-card__header">
         <div>
-          <p className="eyebrow">身体资料</p>
-          <h2 id="profile-settings-title">关于你</h2>
-          <p>资料只保存在本机，用于计算推荐热量与三大营养素。</p>
+          <p className="eyebrow">{t('profile.eyebrow')}</p>
+          <h2 id="profile-settings-title">{t('profile.title')}</h2>
+          <p>{t('profile.description')}</p>
         </div>
         {preview && (
           <div className="settings-card__metric">
-            <span>自动推荐</span>
-            <strong>{formatKcal(preview.target.kcal)} kcal</strong>
+            <span>{t('profile.autoTarget')}</span>
+            <strong>
+              {formatKcal(preview.target.kcal)} {t('common.kcal')}
+            </strong>
           </div>
         )}
       </header>
 
       <div className="settings-form">
         <div className="field">
-          <span className="field-label">生理性别</span>
-          <div className="segmented segmented--wide" role="group" aria-label="生理性别">
+          <span className="field-label">{t('profile.sex')}</span>
+          <div
+            className="segmented segmented--wide"
+            role="group"
+            aria-label={t('profile.sex')}
+          >
             {SEX_OPTIONS.map((option) => (
               <button
                 type="button"
@@ -167,7 +172,7 @@ export function ProfileForm() {
                 aria-pressed={sex === option.value}
                 onClick={() => setSex(option.value)}
               >
-                {option.label}
+                {t(option.labelKey)}
               </button>
             ))}
           </div>
@@ -175,7 +180,7 @@ export function ProfileForm() {
 
         <div className="field-row field-row--three">
           <label className="field">
-            <span className="field-label">年龄</span>
+            <span className="field-label">{t('profile.age')}</span>
             <span className="input-with-suffix">
               <input
                 type="number"
@@ -188,13 +193,13 @@ export function ProfileForm() {
                   setErrors((current) => ({ ...current, age: undefined }));
                 }}
               />
-              <span>岁</span>
+              <span>{t('common.ageUnit')}</span>
             </span>
             {errors.age && <span className="field-error">{errors.age}</span>}
           </label>
 
           <label className="field">
-            <span className="field-label">身高</span>
+            <span className="field-label">{t('profile.height')}</span>
             <span className="input-with-suffix">
               <input
                 type="number"
@@ -207,7 +212,7 @@ export function ProfileForm() {
                   setErrors((current) => ({ ...current, height: undefined }));
                 }}
               />
-              <span>cm</span>
+              <span>{t('common.cmUnit')}</span>
             </span>
             {errors.height && (
               <span className="field-error">{errors.height}</span>
@@ -215,7 +220,7 @@ export function ProfileForm() {
           </label>
 
           <label className="field">
-            <span className="field-label">体重</span>
+            <span className="field-label">{t('profile.weight')}</span>
             <span className="input-with-suffix">
               <input
                 type="number"
@@ -228,7 +233,7 @@ export function ProfileForm() {
                   setErrors((current) => ({ ...current, weight: undefined }));
                 }}
               />
-              <span>kg</span>
+              <span>{t('common.kgUnit')}</span>
             </span>
             {errors.weight && (
               <span className="field-error">{errors.weight}</span>
@@ -238,7 +243,7 @@ export function ProfileForm() {
 
         <div className="field-row">
           <label className="field">
-            <span className="field-label">日常活动</span>
+            <span className="field-label">{t('profile.activity')}</span>
             <select
               value={activityLevel}
               onChange={(event) =>
@@ -247,21 +252,21 @@ export function ProfileForm() {
             >
               {ACTIVITY_LEVELS.map((level) => (
                 <option key={level.value} value={level.value}>
-                  {level.label} · {level.description}
+                  {t(level.labelKey)} · {t(level.descriptionKey)}
                 </option>
               ))}
             </select>
           </label>
 
           <label className="field">
-            <span className="field-label">当前目标</span>
+            <span className="field-label">{t('profile.goal')}</span>
             <select
               value={goal}
               onChange={(event) => setGoal(event.target.value as Goal)}
             >
               {GOALS.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {option.label} · {option.description}
+                  {t(option.labelKey)} · {t(option.descriptionKey)}
                 </option>
               ))}
             </select>
@@ -275,20 +280,20 @@ export function ProfileForm() {
         )}
 
         <div className="settings-card__actions">
-          <p className="field-hint">
-            保存资料后，自动推荐目标会立即更新；手动目标不受影响。
-          </p>
+          <p className="field-hint">{t('profile.saveHint')}</p>
           <Button
             icon={<Save size={16} />}
             loading={saving}
             onClick={() => void handleSave()}
           >
-            保存资料
+            {t('profile.save')}
           </Button>
         </div>
       </div>
 
-      <p className="settings-card__note">{NUTRITION_REFERENCE_NOTE}</p>
+      <p className="settings-card__note">
+        {t('notes.nutritionReference')}
+      </p>
     </section>
   );
 }

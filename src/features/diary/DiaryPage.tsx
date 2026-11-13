@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
 import type { FoodEntry, MealType } from '../../domain/types';
-import { MEAL_META, MEAL_TYPES } from '../../domain/constants';
+import { MEAL_TYPES } from '../../domain/constants';
+import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { Button } from '../../ui/Button';
 import { AnalysisCard } from './AnalysisCard';
@@ -39,6 +40,7 @@ function DiarySkeleton() {
 }
 
 export function DiaryPage({ onShare }: DiaryPageProps) {
+  const { t } = useI18n();
   const {
     selectedDate,
     currentLog,
@@ -72,18 +74,16 @@ export function DiaryPage({ onShare }: DiaryPageProps) {
             <AlertTriangle size={22} aria-hidden="true" />
           </div>
           <div>
-            <h2>这一天的记录暂时无法读取</h2>
+            <h2>{t('diary.loadErrorTitle')}</h2>
             <p>{logError}</p>
-            <p className="inline-error__hint">
-              数据没有被清空。请重新加载；如果问题持续，请先不要继续写入。
-            </p>
+            <p className="inline-error__hint">{t('diary.loadErrorHint')}</p>
             <Button
               variant="secondary"
               size="sm"
               icon={<RefreshCw size={15} />}
               onClick={actions.retryLogLoad}
             >
-              重新加载
+              {t('app.reload')}
             </Button>
           </div>
         </section>
@@ -105,11 +105,11 @@ export function DiaryPage({ onShare }: DiaryPageProps) {
           <section className="meals-section" aria-labelledby="meals-title">
             <div className="section-heading">
               <div>
-                <p className="eyebrow">一日三餐</p>
-                <h2 id="meals-title">餐食记录</h2>
+                <p className="eyebrow">{t('meals.eyebrow')}</p>
+                <h2 id="meals-title">{t('meals.title')}</h2>
               </div>
               <span className="section-heading__hint">
-                共 {summary.entryCount} 项记录
+                {t('diary.recordsCount', { n: summary.entryCount })}
               </span>
             </div>
 
@@ -143,12 +143,7 @@ export function DiaryPage({ onShare }: DiaryPageProps) {
         onClose={() => setEditing(null)}
       />
 
-      <p className="diary-footnote">
-        {MEAL_META.breakfast.label} · {MEAL_META.lunch.label} ·{' '}
-        {MEAL_META.dinner.label} · {MEAL_META.snack.label}
-        <span aria-hidden="true"> · </span>
-        每一次记录都会自动保存到本机
-      </p>
+      <p className="diary-footnote">{t('diary.footnote')}</p>
     </div>
   );
 }

@@ -20,6 +20,7 @@ import {
   materializeImportedFoods,
   type FoodImportPlan,
 } from './foodTransfer';
+import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { useToast } from '../../ui/ToastProvider';
 import { Button } from '../../ui/Button';
@@ -35,6 +36,7 @@ export function ImportFoodsModal({
   open,
   onClose,
 }: ImportFoodsModalProps) {
+  const { t } = useI18n();
   const { foods, actions } = useApp();
   const { showToast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -70,7 +72,7 @@ export function ImportFoodsModal({
     setFileName(file.name);
 
     if (file.size > 2 * 1024 * 1024) {
-      setErrors(['文件超过 2MB。请确认导入的是食物库 JSON，而不是完整备份。']);
+      setErrors([t('import.fileTooLarge')]);
       return;
     }
 
@@ -78,7 +80,7 @@ export function ImportFoodsModal({
     try {
       text = await file.text();
     } catch {
-      setErrors(['无法读取这个文件，请重新选择。']);
+      setErrors([t('import.unreadable')]);
       return;
     }
 
@@ -113,7 +115,7 @@ export function ImportFoodsModal({
       'calorie-foods-template.json',
       buildFoodImportTemplate(),
     );
-    showToast('示例模板已下载。');
+    showToast(t('import.templateDownloaded'));
   };
 
   const handleImport = async () => {
@@ -127,16 +129,16 @@ export function ImportFoodsModal({
     try {
       const importedFoods: Food[] = materializeImportedFoods(plan, overwrite);
       if (importedFoods.length === 0) {
-        setImportError('没有需要导入的新食物。');
+        setImportError(t('import.empty'));
         setImporting(false);
         return;
       }
       await actions.importFoods(importedFoods);
-      showToast(`已导入 ${importedFoods.length} 项食物。`);
+      showToast(t('import.imported', { n: importedFoods.length }));
       onClose();
     } catch (error) {
       setImportError(
-        error instanceof Error ? error.message : '导入失败，请重试。',
+        error instanceof Error ? error.message : t('import.failed'),
       );
     } finally {
       setImporting(false);
@@ -163,12 +165,12 @@ export function ImportFoodsModal({
       open={open}
       onClose={handleClose}
       size="lg"
-      title="导入食物库"
-      description="导入只新增或更新食物，不会删除当前食物库。支持随时随地再次导入。"
+      title={t('import.title')}
+      description={t('import.description')}
       footer={
         <>
           <Button variant="ghost" onClick={handleClose} disabled={importing}>
-            取消
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={() => void handleImport()}
@@ -177,9 +179,9 @@ export function ImportFoodsModal({
           >
             {plan
               ? overwrite && plan.conflicts.length > 0
-                ? `导入 / 覆盖 ${addedCount} 项`
-                : `导入 ${addedCount} 项`
-              : '导入'}
+                ? t('import.actionOverwrite', { n: addedCount })
+                : t('import.actionCount', { n: addedCount })
+              : t('import.action')}
           </Button>
         </>
       }
@@ -194,15 +196,15 @@ export function ImportFoodsModal({
             {fileName ? <FileJson size={24} /> : <Upload size={24} />}
           </span>
           <div>
-            <strong>{fileName || '选择 JSON 文件'}</strong>
-            <small>点击选择，或将文件拖到这里</small>
+            <strong>{fileName || t('import.chooseJson')}</strong>
+            <small>{t('import.dropHint')}</small>
           </div>
           <Button
             variant="secondary"
             size="sm"
             onClick={() => inputRef.current?.click()}
           >
-            选择文件
+            {t('import.chooseFile')}
           </Button>
           <input
             ref={inputRef}
@@ -217,16 +219,14 @@ export function ImportFoodsModal({
         </div>
 
         <div className="import-tools">
-          <p>
-            需要格式参考？下载一份示例模板，再用任意编辑器填写。
-          </p>
+          <p>{t('import.templateHint')}</p>
           <button
             type="button"
             className="text-button"
             onClick={downloadTemplate}
           >
             <Download size={15} aria-hidden="true" />
-            下载 JSON 模板
+            {t('import.templateDownload')}
           </button>
         </div>
 
@@ -234,7 +234,7 @@ export function ImportFoodsModal({
           <div className="import-errors" role="alert">
             <div className="import-errors__title">
               <AlertTriangle size={17} aria-hidden="true" />
-              文件无法导入
+              {t('import.invalidTitle')}
             </div>
             <ul>
               {errors.slice(0, 8).map((error) => (
@@ -242,7 +242,9 @@ export function ImportFoodsModal({
               ))}
             </ul>
             {errors.length > 8 && (
-              <p>另外还有 {errors.length - 8} 个问题未显示。</p>
+              <p>
+                {t('import.moreIssues', { n: errors.length - 8 })}
+              </p>
             )}
           </div>
         )}
@@ -251,15 +253,15 @@ export function ImportFoodsModal({
           <div className="import-preview">
             <div className="import-summary-grid">
               <div className="import-summary">
-                <span>文件中的食物</span>
+                <span>{t('import.fileFoods')}</span>
                 <strong>{plan.total}</strong>
               </div>
               <div className="import-summary">
-                <span>新增</span>
+                <span>{t('import.newItems')}</span>
                 <strong className="is-positive">{plan.newItems.length}</strong>
               </div>
               <div className="import-summary">
-                <span>冲突</span>
+                <span>{t('import.conflicts')}</span>
                 <strong className={plan.conflicts.length ? 'is-warning' : ''}>
                   {plan.conflicts.length}
                 </strong>
@@ -270,7 +272,7 @@ export function ImportFoodsModal({
               <div className="import-errors" role="alert">
                 <div className="import-errors__title">
                   <AlertTriangle size={17} aria-hidden="true" />
-                  需要先处理冲突
+                  {t('import.resolveTitle')}
                 </div>
                 <ul>
                   {plan.blockingErrors.map((error) => (
@@ -284,8 +286,8 @@ export function ImportFoodsModal({
               <>
                 <div className="conflict-list">
                   <div className="conflict-list__heading">
-                    <span>与现有食物冲突</span>
-                    <span>匹配方式</span>
+                    <span>{t('import.conflictHeading')}</span>
+                    <span>{t('import.matchMethod')}</span>
                   </div>
                   {plan.conflicts.slice(0, 6).map((conflict) => (
                     <div
@@ -294,14 +296,18 @@ export function ImportFoodsModal({
                     >
                       <span>{conflict.incoming.name}</span>
                       <small>
-                        {conflict.matchedBy === 'id' ? 'ID' : '名称'} ·{' '}
-                        {conflict.existing.name}
+                        {conflict.matchedBy === 'id'
+                          ? t('import.matchId')
+                          : t('import.matchName')}{' '}
+                        · {conflict.existing.name}
                       </small>
                     </div>
                   ))}
                   {plan.conflicts.length > 6 && (
                     <p className="conflict-list__more">
-                      还有 {plan.conflicts.length - 6} 个冲突未显示。
+                      {t('import.moreConflicts', {
+                        n: plan.conflicts.length - 6,
+                      })}
                     </p>
                   )}
                 </div>
@@ -313,10 +319,8 @@ export function ImportFoodsModal({
                     onChange={(event) => setOverwrite(event.target.checked)}
                   />
                   <span>
-                    <strong>覆盖同名或同 ID 食物</strong>
-                    <small>
-                      不勾选时会保留现有食物并跳过冲突；勾选后会以文件内容更新。
-                    </small>
+                    <strong>{t('import.overwriteTitle')}</strong>
+                    <small>{t('import.overwriteHint')}</small>
                   </span>
                 </label>
               </>
@@ -324,7 +328,7 @@ export function ImportFoodsModal({
 
             <div className="import-ok">
               <CheckCircle2 size={17} aria-hidden="true" />
-              校验通过，可以导入。导入过程会一次性写入，失败不会留下半份数据。
+              {t('import.ready')}
             </div>
 
             {importError && (
@@ -335,10 +339,7 @@ export function ImportFoodsModal({
           </div>
         )}
 
-        <p className="import-schema-note">
-          JSON 格式版本为 1，包含名称、分类、基准状态和每 100g 营养数据。
-          完整字段可在下载的模板中查看。
-        </p>
+        <p className="import-schema-note">{t('import.schemaNote')}</p>
       </div>
     </Modal>
   );

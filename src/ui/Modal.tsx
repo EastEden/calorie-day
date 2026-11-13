@@ -6,6 +6,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
+import { useI18n } from '../i18n';
 
 interface ModalProps {
   open: boolean;
@@ -37,6 +38,7 @@ export function Modal({
   size = 'md',
   closeOnBackdrop = true,
 }: ModalProps) {
+  const { t } = useI18n();
   const panelRef = useRef<HTMLDivElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
@@ -145,7 +147,7 @@ export function Modal({
             type="button"
             className="icon-button icon-button--muted modal-close"
             onClick={onClose}
-            aria-label="关闭"
+            aria-label={t('ui.closeAria')}
           >
             <X size={20} aria-hidden="true" />
           </button>

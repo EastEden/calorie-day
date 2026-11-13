@@ -12,6 +12,7 @@ import {
 } from '../../domain/formatters';
 import { formatLongDate, isToday } from '../../domain/dates';
 import { getEntryNutrition } from '../../domain/nutrition';
+import { useI18n } from '../../i18n';
 import { MACRO_COLORS } from '../../ui/MacroDonut';
 import { MealIcon } from '../../ui/MealIcon';
 
@@ -21,13 +22,13 @@ interface ShareCardProps {
   date: IsoDate;
 }
 
-function formatShareAmount(entry: FoodEntry): string {
+function formatShareAmount(entry: FoodEntry, gramUnit: string): string {
   if (entry.enteredUnit === 'serving' && entry.servingLabel) {
     return `${formatDecimal(entry.enteredQuantity)} ${entry.servingLabel} · ${formatDecimal(
       entry.amountGrams,
-    )}g`;
+    )}${gramUnit}`;
   }
-  return `${formatDecimal(entry.amountGrams)}g`;
+  return `${formatDecimal(entry.amountGrams)}${gramUnit}`;
 }
 
 function ShareMeal({
@@ -39,8 +40,10 @@ function ShareMeal({
   summary: DaySummary;
   entries: FoodEntry[];
 }) {
+  const { t } = useI18n();
   const meta = MEAL_META[mealType];
   const mealSummary = summary.byMeal[mealType];
+  const gramUnit = t('common.gram');
 
   return (
     <section className="share-meal">
@@ -49,69 +52,115 @@ function ShareMeal({
           <span className={`share-meal__icon share-meal__icon--${mealType}`}>
             <MealIcon mealType={mealType} size={15} />
           </span>
-          <strong>{meta.label}</strong>
+          <strong>{t(meta.labelKey)}</strong>
         </div>
         <div className="share-meal__kcal">
           <strong>{formatKcal(mealSummary.totals.kcal)}</strong>
-          <span> kcal</span>
+          <span> {t('common.kcal')}</span>
         </div>
       </div>
 
       {entries.length > 0 ? (
         <>
           <div className="share-meal__macros">
-            <span>碳水 {formatDecimal(mealSummary.totals.carbsG)}g</span>
-            <span>蛋白 {formatDecimal(mealSummary.totals.proteinG)}g</span>
-            <span>脂肪 {formatDecimal(mealSummary.totals.fatG)}g</span>
+            <span>
+              {t('common.carbs')} {formatDecimal(mealSummary.totals.carbsG)}
+              {gramUnit}
+            </span>
+            <span>
+              {t('common.proteinShort')}{' '}
+              {formatDecimal(mealSummary.totals.proteinG)}
+              {gramUnit}
+            </span>
+            <span>
+              {t('common.fat')} {formatDecimal(mealSummary.totals.fatG)}
+              {gramUnit}
+            </span>
           </div>
           <div className="share-meal__entries">
             {entries.map((entry) => (
               <div className="share-entry" key={entry.id}>
                 <span className="share-entry__name">{entry.foodName}</span>
                 <span className="share-entry__amount">
-                  {formatShareAmount(entry)}
+                  {formatShareAmount(entry, gramUnit)}
                 </span>
                 <strong className="share-entry__kcal">
                   {formatKcal(getEntryNutrition(entry).kcal)}
-                  <small> kcal</small>
+                  <small> {t('common.kcal')}</small>
                 </strong>
               </div>
             ))}
           </div>
         </>
       ) : (
-        <p className="share-meal__empty">这一餐还没有记录</p>
+        <p className="share-meal__empty">{t('share.emptyMeal')}</p>
       )}
     </section>
   );
 }
 
 export function ShareCard({ summary, log, date }: ShareCardProps) {
+  const { t } = useI18n();
   const target = summary.target;
   const progress = target
     ? Math.min(100, Math.max(0, summary.calorieProgress))
     : 0;
   const remaining = summary.remainingKcal;
   const hasEntries = summary.entryCount > 0;
+  const gramUnit = t('common.gram');
+
+  const macroCards = [
+    {
+      key: 'carbs',
+      label: t('common.carbs'),
+      value: summary.totals.carbsG,
+      target: target?.carbsG ?? 0,
+      color: MACRO_COLORS.carbs,
+    },
+    {
+      key: 'protein',
+      label: t('common.protein'),
+      value: summary.totals.proteinG,
+      target: target?.proteinG ?? 0,
+      color: MACRO_COLORS.protein,
+    },
+    {
+      key: 'fat',
+      label: t('common.fat'),
+      value: summary.totals.fatG,
+      target: target?.fatG ?? 0,
+      color: MACRO_COLORS.fat,
+    },
+  ];
 
   return (
     <div className="share-card">
       <header className="share-card__header">
         <div>
-          <span className="share-card__kicker">DAILY NUTRITION</span>
-          <h1>{isToday(date) ? '今日营养' : '当日营养'}</h1>
+          <span className="share-card__kicker">{t('share.kicker')}</span>
+          <h1>
+            {isToday(date)
+              ? t('share.cardTitleToday')
+              : t('share.cardTitleSelected')}
+          </h1>
         </div>
         <span className="share-card__date">{formatLongDate(date)}</span>
       </header>
 
       <section className="share-hero">
         <div className="share-hero__top">
-          <span>已摄入</span>
-          {target && <span>推荐 {formatKcal(target.kcal)} kcal</span>}
+          <span>{t('share.consumed')}</span>
+          {target && (
+            <span>
+              {t('share.recommended', {
+                kcal: formatKcal(target.kcal),
+              })}
+            </span>
+          )}
         </div>
         <div className="share-hero__number">
           <strong>{formatKcal(summary.totals.kcal)}</strong>
-          <span>kcal</span>
+          <span>{t('common.kcal')}</span>
         </div>
         {target && (
           <>
@@ -121,8 +170,12 @@ export function ShareCard({ summary, log, date }: ShareCardProps) {
             <div className="share-hero__bottom">
               <span>
                 {remaining !== null && remaining < 0
-                  ? `已超出 ${formatKcal(Math.abs(remaining))} kcal`
-                  : `还可摄入 ${formatKcal(remaining ?? 0)} kcal`}
+                  ? t('share.over', {
+                      kcal: formatKcal(Math.abs(remaining)),
+                    })
+                  : t('share.remaining', {
+                      kcal: formatKcal(remaining ?? 0),
+                    })}
               </span>
               <strong>{Math.round(summary.calorieProgress)}%</strong>
             </div>
@@ -130,30 +183,8 @@ export function ShareCard({ summary, log, date }: ShareCardProps) {
         )}
       </section>
 
-      <section className="share-macros" aria-label="三大营养素">
-        {[
-          {
-            key: 'carbs',
-            label: '碳水',
-            value: summary.totals.carbsG,
-            target: target?.carbsG ?? 0,
-            color: MACRO_COLORS.carbs,
-          },
-          {
-            key: 'protein',
-            label: '蛋白质',
-            value: summary.totals.proteinG,
-            target: target?.proteinG ?? 0,
-            color: MACRO_COLORS.protein,
-          },
-          {
-            key: 'fat',
-            label: '脂肪',
-            value: summary.totals.fatG,
-            target: target?.fatG ?? 0,
-            color: MACRO_COLORS.fat,
-          },
-        ].map((macro) => {
+      <section className="share-macros" aria-label={t('share.macroAria')}>
+        {macroCards.map((macro) => {
           const percent =
             macro.target > 0
               ? Math.min(100, (macro.value / macro.target) * 100)
@@ -169,7 +200,11 @@ export function ShareCard({ summary, log, date }: ShareCardProps) {
               </div>
               <div className="share-macro__value">
                 <strong>{formatDecimal(macro.value)}</strong>
-                <span> / {formatDecimal(macro.target)}g</span>
+                <span>
+                  {' '}
+                  / {formatDecimal(macro.target)}
+                  {gramUnit}
+                </span>
               </div>
               <div className="share-macro__track">
                 <span
@@ -184,10 +219,10 @@ export function ShareCard({ summary, log, date }: ShareCardProps) {
         })}
       </section>
 
-      <section className="share-energy" aria-label="宏量供能占比">
+      <section className="share-energy" aria-label={t('share.energyTitle')}>
         <div className="share-section-title">
-          <h2>宏量供能</h2>
-          <span>4 / 4 / 9</span>
+          <h2>{t('share.energyTitle')}</h2>
+          <span>{t('share.energyFormula')}</span>
         </div>
         <div className="share-energy__bar">
           <span
@@ -211,21 +246,33 @@ export function ShareCard({ summary, log, date }: ShareCardProps) {
         </div>
         <div className="share-energy__labels">
           <span>
-            碳水 {hasEntries ? `${Math.round(summary.macroEnergy.carbsPercent)}%` : '—'}
+            {t('share.energyCarbs', {
+              percent: hasEntries
+                ? Math.round(summary.macroEnergy.carbsPercent)
+                : t('common.notAvailable'),
+            })}
           </span>
           <span>
-            蛋白 {hasEntries ? `${Math.round(summary.macroEnergy.proteinPercent)}%` : '—'}
+            {t('share.energyProtein', {
+              percent: hasEntries
+                ? Math.round(summary.macroEnergy.proteinPercent)
+                : t('common.notAvailable'),
+            })}
           </span>
           <span>
-            脂肪 {hasEntries ? `${Math.round(summary.macroEnergy.fatPercent)}%` : '—'}
+            {t('share.energyFat', {
+              percent: hasEntries
+                ? Math.round(summary.macroEnergy.fatPercent)
+                : t('common.notAvailable'),
+            })}
           </span>
         </div>
       </section>
 
       <section className="share-meals">
         <div className="share-section-title share-section-title--meals">
-          <h2>餐食明细</h2>
-          <span>{summary.entryCount} 项记录</span>
+          <h2>{t('share.mealDetails')}</h2>
+          <span>{t('share.recordsCount', { n: summary.entryCount })}</span>
         </div>
 
         {MEAL_TYPES.map((mealType) => (

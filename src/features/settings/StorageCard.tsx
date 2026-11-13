@@ -7,10 +7,12 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import { formatBytes } from '../../data/storageInfo';
+import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { Button } from '../../ui/Button';
 
 export function StorageCard() {
+  const { t } = useI18n();
   const { storageInfo, actions, foods } = useApp();
   const quotaLabel =
     storageInfo.usageBytes !== null
@@ -19,18 +21,15 @@ export function StorageCard() {
             ? ` / ${formatBytes(storageInfo.quotaBytes)}`
             : ''
         }`
-      : '暂不可用';
+      : t('storage.unsupported');
 
   return (
     <section className="settings-card settings-card--storage" aria-labelledby="storage-title">
       <header className="settings-card__header">
         <div>
-          <p className="eyebrow">自动保存</p>
-          <h2 id="storage-title">本地数据</h2>
-          <p>
-            每日记录和食物库通过 IndexedDB 保存在当前浏览器中。
-            每次添加、修改或删除都会在界面确认前完成写入。
-          </p>
+          <p className="eyebrow">{t('storage.eyebrow')}</p>
+          <h2 id="storage-title">{t('storage.title')}</h2>
+          <p>{t('storage.description')}</p>
         </div>
         <span className="storage-icon" aria-hidden="true">
           <Database size={22} />
@@ -43,8 +42,8 @@ export function StorageCard() {
             <HardDrive size={17} aria-hidden="true" />
           </span>
           <div>
-            <span>存储位置</span>
-            <strong>此设备的浏览器 · IndexedDB</strong>
+            <span>{t('storage.location')}</span>
+            <strong>{t('storage.locationValue')}</strong>
           </div>
         </div>
 
@@ -57,11 +56,11 @@ export function StorageCard() {
             )}
           </span>
           <div>
-            <span>持久存储</span>
+            <span>{t('storage.persistent')}</span>
             <strong>
               {storageInfo.persisted
-                ? '已启用，降低被系统回收的概率'
-                : '尚未启用'}
+                ? t('storage.persistentOn')
+                : t('storage.persistentOff')}
             </strong>
           </div>
         </div>
@@ -71,7 +70,7 @@ export function StorageCard() {
             <LockKeyhole size={17} aria-hidden="true" />
           </span>
           <div>
-            <span>当前占用</span>
+            <span>{t('storage.usage')}</span>
             <strong>{quotaLabel}</strong>
           </div>
         </div>
@@ -79,8 +78,8 @@ export function StorageCard() {
 
       <div className="storage-actions">
         <p>
-          已加载 {foods.length} 项食物。数据只属于当前浏览器和当前网址，
-          清理站点数据、换浏览器或换设备后不会自动出现。
+          {t('storage.loaded', { n: foods.length })}
+          {t('storage.localOnly')}
         </p>
         <Button
           variant="secondary"
@@ -89,14 +88,11 @@ export function StorageCard() {
           onClick={() => void actions.requestPersistence()}
           disabled={!storageInfo.supported}
         >
-          申请持久存储
+          {t('storage.request')}
         </Button>
       </div>
 
-      <p className="settings-card__note">
-        同一浏览器、同一网址下，刷新页面、关闭标签页或重启浏览器后，
-        记录会自动从本地数据库恢复。清理浏览器站点数据会删除这些记录。
-      </p>
+      <p className="settings-card__note">{t('storage.note')}</p>
     </section>
   );
 }

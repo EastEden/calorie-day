@@ -11,6 +11,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { formatLongDate, isToday } from '../../domain/dates';
+import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { useToast } from '../../ui/ToastProvider';
 import { Button } from '../../ui/Button';
@@ -31,6 +32,7 @@ interface ImageDimensions {
 }
 
 export function ShareModal({ open, onClose }: ShareModalProps) {
+  const { t } = useI18n();
   const { currentLog, summary, selectedDate } = useApp();
   const { showToast } = useToast();
   const captureRef = useRef<HTMLDivElement>(null);
@@ -51,7 +53,7 @@ export function ShareModal({ open, onClose }: ShareModalProps) {
 
     if (!currentLog || !summary.target || summary.entryCount === 0) {
       setStatus('error');
-      setError('这一天的记录不足，暂时无法生成分享图。');
+      setError(t('share.insufficient'));
       return;
     }
 
@@ -72,13 +74,13 @@ export function ShareModal({ open, onClose }: ShareModalProps) {
 
         const node = captureRef.current;
         if (!node) {
-          throw new Error('没有找到分享图内容。');
+          throw new Error(t('share.noContent'));
         }
 
         const width = 402;
         const cssHeight = Math.ceil(node.getBoundingClientRect().height);
         if (!cssHeight || cssHeight < 1) {
-          throw new Error('分享图内容高度异常。');
+          throw new Error(t('share.invalidHeight'));
         }
 
         const dataUrl = await toPng(node, {
@@ -119,7 +121,7 @@ export function ShareModal({ open, onClose }: ShareModalProps) {
         setError(
           generationError instanceof Error
             ? generationError.message
-            : '图片生成失败，请重试。',
+            : t('share.generateFailed'),
         );
       }
     }
@@ -129,19 +131,19 @@ export function ShareModal({ open, onClose }: ShareModalProps) {
     return () => {
       cancelled = true;
     };
-  }, [currentLog, open, retryToken, selectedDate, summary]);
+  }, [currentLog, open, retryToken, selectedDate, summary, t]);
 
   const saveImage = () => {
     if (!image) {
       return;
     }
     downloadDataUrl(`nutrition-${selectedDate}.png`, image);
-    showToast('分享图已开始下载。');
+    showToast(t('share.downloadStarted'));
   };
 
   const title = isToday(selectedDate)
-    ? '分享今日营养'
-    : `分享 ${formatLongDate(selectedDate)} 的营养`;
+    ? t('share.titleToday')
+    : t('share.titleDate', { date: formatLongDate(selectedDate) });
 
   return (
     <>
@@ -150,18 +152,18 @@ export function ShareModal({ open, onClose }: ShareModalProps) {
         onClose={onClose}
         size="lg"
         title={title}
-        description="固定 1206px 宽的竖版长图，高度随餐食内容自动增加。"
+        description={t('share.description')}
         footer={
           <>
             <Button variant="ghost" onClick={onClose}>
-              关闭
+              {t('share.close')}
             </Button>
             <Button
               icon={<Download size={16} />}
               onClick={saveImage}
               disabled={!image}
             >
-              保存 PNG
+              {t('share.save')}
             </Button>
           </>
         }
@@ -172,8 +174,8 @@ export function ShareModal({ open, onClose }: ShareModalProps) {
               <span className="share-generating__spinner">
                 <Loader2 size={24} />
               </span>
-              <strong>正在生成分享图</strong>
-              <p>正在把你的今日营养排成一张长图，请稍候。</p>
+              <strong>{t('share.generatingTitle')}</strong>
+              <p>{t('share.generatingBody')}</p>
             </div>
           )}
 
@@ -182,7 +184,7 @@ export function ShareModal({ open, onClose }: ShareModalProps) {
               <span className="share-generation-error__icon">
                 <ImageIcon size={24} aria-hidden="true" />
               </span>
-              <strong>这次没有生成成功</strong>
+              <strong>{t('share.errorTitle')}</strong>
               <p>{error}</p>
               <Button
                 variant="secondary"
@@ -190,7 +192,7 @@ export function ShareModal({ open, onClose }: ShareModalProps) {
                 icon={<RefreshCw size={15} />}
                 onClick={() => setRetryToken((value) => value + 1)}
               >
-                重新生成
+                {t('share.retry')}
               </Button>
             </div>
           )}
@@ -201,23 +203,23 @@ export function ShareModal({ open, onClose }: ShareModalProps) {
                 <img
                   className="share-preview__image"
                   src={image}
-                  alt="今日营养分享图预览"
+                  alt={t('share.imageAlt')}
                 />
               </div>
               <div className="share-preview__meta">
                 <span>
                   {dimensions
                     ? `${dimensions.width} × ${dimensions.height}px`
-                    : '1206px 宽'}
+                    : t('share.widthOnly')}
                 </span>
-                <span>在 iPhone 上也可以长按预览图保存</span>
+                <span>{t('share.saveHint')}</span>
               </div>
             </>
           )}
 
           {!currentLog && (
             <div className="share-generation-error" role="alert">
-              <p>记录还没有加载完成，请关闭后再试。</p>
+              <p>{t('share.loading')}</p>
             </div>
           )}
         </div>

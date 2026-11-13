@@ -1,20 +1,38 @@
+import { getCurrentLocale } from '../i18n/core';
 import type { FoodEntry } from './types';
 
-const numberFormatter = new Intl.NumberFormat('zh-CN', {
-  maximumFractionDigits: 0,
-});
+const formatterCache = new Map<string, Intl.NumberFormat>();
 
-const decimalFormatter = new Intl.NumberFormat('zh-CN', {
-  maximumFractionDigits: 1,
-  minimumFractionDigits: 0,
-});
+function getFormatter(
+  kind: 'integer' | 'decimal',
+  locale: string,
+): Intl.NumberFormat {
+  const key = `${kind}:${locale}`;
+  const cached = formatterCache.get(key);
+  if (cached) {
+    return cached;
+  }
+
+  const formatter = new Intl.NumberFormat(
+    locale,
+    kind === 'integer'
+      ? { maximumFractionDigits: 0 }
+      : { maximumFractionDigits: 1, minimumFractionDigits: 0 },
+  );
+  formatterCache.set(key, formatter);
+  return formatter;
+}
 
 export function formatKcal(value: number): string {
-  return numberFormatter.format(Math.round(Number.isFinite(value) ? value : 0));
+  return getFormatter('integer', getCurrentLocale()).format(
+    Math.round(Number.isFinite(value) ? value : 0),
+  );
 }
 
 export function formatDecimal(value: number): string {
-  return decimalFormatter.format(Number.isFinite(value) ? value : 0);
+  return getFormatter('decimal', getCurrentLocale()).format(
+    Number.isFinite(value) ? value : 0,
+  );
 }
 
 export function formatGrams(value: number): string {
@@ -22,7 +40,9 @@ export function formatGrams(value: number): string {
 }
 
 export function formatPercent(value: number): string {
-  return `${numberFormatter.format(Math.round(Number.isFinite(value) ? value : 0))}%`;
+  return `${getFormatter('integer', getCurrentLocale()).format(
+    Math.round(Number.isFinite(value) ? value : 0),
+  )}%`;
 }
 
 export function formatSignedKcal(value: number): string {
@@ -39,10 +59,10 @@ export function formatEntryAmount(entry: FoodEntry): string {
     entry.servingLabel &&
     Number.isFinite(entry.enteredQuantity)
   ) {
-    return `${formatDecimal(entry.enteredQuantity)} ${entry.servingLabel} · ${formatKcal(
+    return `${formatDecimal(entry.enteredQuantity)} ${entry.servingLabel} · ${formatDecimal(
       entry.amountGrams,
     )} g`;
   }
 
-  return `${formatKcal(entry.amountGrams)} g`;
+  return `${formatDecimal(entry.amountGrams)} g`;
 }

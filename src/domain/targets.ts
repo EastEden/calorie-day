@@ -66,13 +66,4 @@ export function resolveTargets(
   return calculateTargets(profile).target;
 }
 
-export function getTargetSourceLabel(
-  profile: UserProfile | null,
-  settings: TargetSettings,
-): string {
-  if (settings.mode === 'manual' && settings.manual) {
-    return '手动目标';
-  }
 
-  return profile ? '自动推荐' : '尚未设置';
-}

@@ -1,6 +1,11 @@
 import { Share2 } from 'lucide-react';
 import type { DaySummary } from '../../domain/types';
-import { formatDecimal, formatKcal, formatPercent } from '../../domain/formatters';
+import {
+  formatDecimal,
+  formatKcal,
+  formatPercent,
+} from '../../domain/formatters';
+import { useI18n } from '../../i18n';
 import { MACRO_COLORS, MacroDonut } from '../../ui/MacroDonut';
 
 interface AnalysisCardProps {
@@ -14,24 +19,25 @@ export function AnalysisCard({
   onShare,
   shareDisabled,
 }: AnalysisCardProps) {
+  const { t } = useI18n();
   const macro = summary.macroEnergy;
   const hasEntries = summary.entryCount > 0;
 
   const legend = [
     {
-      label: '碳水',
+      labelKey: 'common.carbs' as const,
       grams: summary.totals.carbsG,
       percent: macro.carbsPercent,
       color: MACRO_COLORS.carbs,
     },
     {
-      label: '蛋白质',
+      labelKey: 'common.protein' as const,
       grams: summary.totals.proteinG,
       percent: macro.proteinPercent,
       color: MACRO_COLORS.protein,
     },
     {
-      label: '脂肪',
+      labelKey: 'common.fat' as const,
       grams: summary.totals.fatG,
       percent: macro.fatPercent,
       color: MACRO_COLORS.fat,
@@ -42,10 +48,12 @@ export function AnalysisCard({
     <section className="analysis-card" aria-labelledby="analysis-title">
       <div className="analysis-card__header">
         <div>
-          <p className="eyebrow">今日结构</p>
-          <h2 id="analysis-title">营养分布</h2>
+          <p className="eyebrow">{t('diary.analysisEyebrow')}</p>
+          <h2 id="analysis-title">{t('diary.analysisTitle')}</h2>
         </div>
-        <span className="analysis-card__formula">4 / 4 / 9</span>
+        <span className="analysis-card__formula">
+          {t('diary.analysisFormula')}
+        </span>
       </div>
 
       <div className="analysis-card__body">
@@ -53,24 +61,33 @@ export function AnalysisCard({
           macroEnergy={macro}
           size={154}
           stroke={15}
-          centerValue={hasEntries ? formatKcal(summary.totals.kcal) : '—'}
-          centerLabel="kcal"
+          centerValue={
+            hasEntries
+              ? formatKcal(summary.totals.kcal)
+              : t('common.notAvailable')
+          }
+          centerLabel={t('common.kcal')}
         />
 
         <div className="analysis-legend">
           {legend.map((item) => (
-            <div className="analysis-legend__row" key={item.label}>
+            <div className="analysis-legend__row" key={item.labelKey}>
               <span
                 className="analysis-legend__dot"
                 style={{ backgroundColor: item.color }}
                 aria-hidden="true"
               />
-              <span className="analysis-legend__name">{item.label}</span>
+              <span className="analysis-legend__name">
+                {t(item.labelKey)}
+              </span>
               <span className="analysis-legend__grams">
-                {formatDecimal(item.grams)}g
+                {formatDecimal(item.grams)}
+                {t('common.gram')}
               </span>
               <strong className="analysis-legend__percent">
-                {hasEntries ? formatPercent(item.percent) : '—'}
+                {hasEntries
+                  ? formatPercent(item.percent)
+                  : t('common.notAvailable')}
               </strong>
             </div>
           ))}
@@ -78,7 +95,7 @@ export function AnalysisCard({
       </div>
 
       <div className="analysis-card__footer">
-        <p>按蛋白质 4、碳水 4、脂肪 9 kcal/g 计算供能占比。</p>
+        <p>{t('diary.analysisNote')}</p>
         <button
           type="button"
           className="text-button text-button--with-icon"
@@ -86,7 +103,7 @@ export function AnalysisCard({
           disabled={shareDisabled}
         >
           <Share2 size={15} aria-hidden="true" />
-          分享今日营养
+          {t('diary.shareCta')}
         </button>
       </div>
     </section>
