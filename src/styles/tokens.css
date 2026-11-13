@@ -1,0 +1,64 @@
+:root {
+  color-scheme: light;
+
+  --bg: #f4f1e8;
+  --bg-soft: #efeade;
+  --surface: #fffdf8;
+  --surface-raised: #fffefb;
+  --surface-soft: #f8f5ec;
+  --ink: #1f2b24;
+  --ink-soft: #3f4c44;
+  --muted: #7b847c;
+  --muted-soft: #9ba29a;
+  --line: #e6e0d2;
+  --line-strong: #d7d0bf;
+
+  --green: #2f5d45;
+  --green-deep: #244b38;
+  --green-dark: #1d3e2e;
+  --green-bright: #4f7c61;
+  --green-soft: #e6efe6;
+  --green-faint: #f0f5ef;
+
+  --orange: #e8a35c;
+  --orange-bright: #f2b36b;
+  --orange-soft: #fbefdf;
+
+  --coral: #d97757;
+  --amber: #d9a03f;
+  --blue: #5c88a8;
+
+  --danger: #b44f4a;
+  --danger-soft: #fbece8;
+  --danger-line: #efd2cc;
+
+  --protein: #d97757;
+  --carbs: #d9a03f;
+  --fat: #5c88a8;
+
+  --shadow-xs: 0 1px 2px rgba(35, 58, 45, 0.04);
+  --shadow-sm: 0 6px 18px rgba(35, 58, 45, 0.05);
+  --shadow-card: 0 16px 42px rgba(35, 58, 45, 0.07);
+  --shadow-float: 0 26px 80px rgba(28, 50, 38, 0.16);
+
+  --radius-xs: 9px;
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --radius-xl: 30px;
+  --radius-pill: 999px;
+
+  --page-width: 1120px;
+  --topbar-height: 74px;
+  --bottomnav-height: 70px;
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+  --font-display:
+    "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", sans-serif;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
