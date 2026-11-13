@@ -206,6 +206,28 @@ export const zhCN = {
   'portion.gramsDetail': '{{grams}}g',
   'portion.submit': '保存份量',
 
+  // Quick cooking oil
+  'quickOil.button': '快速加油',
+  'quickOil.short': '油',
+  'quickOil.aria': '为{{meal}}快速加入烹饪用油',
+  'quickOil.title': '快速加入烹饪用油',
+  'quickOil.description': '为{{meal}}记录烹饪用油，不必再搜索食物库。',
+  'quickOil.oil': '食用油',
+  'quickOil.amount': '用量',
+  'quickOil.amountAria': '选择用油量',
+  'quickOil.gramsAria': '自定义克数',
+  'quickOil.quickAmount': '{{value}}g',
+  'quickOil.amountHint': '默认 10g，可快速调整。',
+  'quickOil.preview': '本次摄入',
+  'quickOil.previewDetail': '{{kcal}} kcal · 脂肪 {{fat}}g',
+  'quickOil.submit': '加入{{meal}}',
+  'quickOil.invalid': '请输入大于 0 的有效克数。',
+  'quickOil.noOilsTitle': '还没有可用的食用油',
+  'quickOil.noOilsBody':
+    '请先在食物库中添加分类为“坚果油脂”的食用油，例如橄榄油、花生油或菜籽油。',
+  'quickOil.noOilsHint': '添加后回到这里，即可快速记录用油。',
+  'quickOil.noSelection': '请选择一种食用油。',
+
   // Entry editor
   'entry.title': '编辑记录',
   'entry.description': '{{meal}} · {{name}} · 当前 {{kcal}} kcal',

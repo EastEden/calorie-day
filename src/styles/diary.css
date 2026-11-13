@@ -610,6 +610,102 @@
   opacity: 0.45;
 }
 
+.meal-card__actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.meal-card__oil {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 31px;
+  height: 31px;
+  padding: 0 8px;
+  flex: none;
+  border: 1px solid #efdfc7;
+  border-radius: var(--radius-pill);
+  background: var(--orange-soft);
+  color: #a86a2d;
+  font-size: 9.5px;
+  font-weight: 680;
+  white-space: nowrap;
+  transition:
+    background-color 0.18s ease,
+    border-color 0.18s ease;
+}
+
+.meal-card__oil:hover:not(:disabled) {
+  border-color: #e4c9a4;
+  background: #f8e7d1;
+}
+
+.meal-card__oil:disabled {
+  opacity: 0.45;
+}
+
+.quick-oil {
+  display: grid;
+  gap: 16px;
+}
+
+.quick-oil__selected {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 46px;
+  padding: 0 13px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-soft);
+  color: var(--green);
+}
+
+.quick-oil__selected strong {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 680;
+}
+
+.quick-oil__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+  padding: 16px 12px 8px;
+  text-align: center;
+}
+
+.quick-oil__empty-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  background: var(--orange-soft);
+  color: #a86a2d;
+}
+
+.quick-oil__empty strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.quick-oil__empty p {
+  max-width: 310px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.quick-oil__empty small {
+  color: var(--muted-soft);
+  font-size: 10px;
+}
+
 .meal-card__macros {
   display: flex;
   flex-wrap: wrap;
@@ -1094,6 +1190,10 @@
     font-size: 15px;
   }
 
+  .meal-card__actions {
+    gap: 3px;
+  }
+
   .meal-card__add {
     min-height: 29px;
     padding: 0 8px;
@@ -1101,6 +1201,17 @@
   }
 
   .meal-card__add svg {
+    width: 13px;
+    height: 13px;
+  }
+
+  .meal-card__oil {
+    min-width: 29px;
+    height: 29px;
+    padding: 0 7px;
+  }
+
+  .meal-card__oil svg {
     width: 13px;
     height: 13px;
   }

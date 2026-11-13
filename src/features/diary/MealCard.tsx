@@ -1,4 +1,4 @@
-import { ChevronRight, Plus } from 'lucide-react';
+import { ChevronRight, Droplet, Plus } from 'lucide-react';
 import type { FoodEntry, MealSummary, MealType } from '../../domain/types';
 import { MEAL_META } from '../../domain/constants';
 import {
@@ -16,6 +16,7 @@ interface MealCardProps {
   summary: MealSummary;
   disabled: boolean;
   onAdd: () => void;
+  onQuickOil: () => void;
   onEdit: (entry: FoodEntry) => void;
 }
 
@@ -25,6 +26,7 @@ export function MealCard({
   summary,
   disabled,
   onAdd,
+  onQuickOil,
   onEdit,
 }: MealCardProps) {
   const { t, locale } = useI18n();
@@ -49,16 +51,29 @@ export function MealCard({
           <span>{t('common.kcal')}</span>
         </div>
 
-        <button
-          type="button"
-          className="meal-card__add"
-          onClick={onAdd}
-          disabled={disabled}
-          aria-label={t('meals.addAria', { meal: mealLabel })}
-        >
-          <Plus size={15} aria-hidden="true" />
-          {t('common.add')}
-        </button>
+        <div className="meal-card__actions">
+          <button
+            type="button"
+            className="meal-card__oil"
+            onClick={onQuickOil}
+            disabled={disabled}
+            aria-label={t('quickOil.aria', { meal: mealLabel })}
+            title={t('quickOil.button')}
+          >
+            <Droplet size={14} aria-hidden="true" />
+            <span>{t('quickOil.short')}</span>
+          </button>
+          <button
+            type="button"
+            className="meal-card__add"
+            onClick={onAdd}
+            disabled={disabled}
+            aria-label={t('meals.addAria', { meal: mealLabel })}
+          >
+            <Plus size={15} aria-hidden="true" />
+            {t('common.add')}
+          </button>
+        </div>
       </header>
 
       {hasEntries && (
