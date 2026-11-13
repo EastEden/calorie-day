@@ -295,7 +295,6 @@ export class IndexedDbRepository implements CalorieRepository {
 
     if (existingMeta !== undefined) {
       await this.resetBuiltInFoods(db, existingMeta);
-      await this.applyBuiltInNamePatches(db);
       return;
     }
 
@@ -328,40 +327,6 @@ export class IndexedDbRepository implements CalorieRepository {
    * built-in foods are replaced by the current seed set. Custom/imported
    * foods, logs, profile and settings are preserved.
    */
-  private async applyBuiltInNamePatches(db: IDBDatabase): Promise<void> {
-    const patches = [
-      {
-        id: 'builtin-firm-tofu',
-        from: '北豆腐',
-        to: '老豆腐',
-      },
-    ];
-    const transaction = db.transaction(STORES.foods, 'readwrite');
-    const foodStore = transaction.objectStore(STORES.foods);
-
-    for (const patch of patches) {
-      const request = foodStore.get(patch.id);
-      request.onsuccess = () => {
-        const food = request.result;
-        if (!isRecord(food) || !isRecord(food.names)) {
-          return;
-        }
-        if (food.names['zh-CN'] !== patch.from) {
-          return;
-        }
-        foodStore.put({
-          ...food,
-          names: {
-            ...food.names,
-            'zh-CN': patch.to,
-          },
-        });
-      };
-    }
-
-    await transactionAsPromise(transaction);
-  }
-
   private async resetBuiltInFoods(
     db: IDBDatabase,
     existingMeta: unknown,
