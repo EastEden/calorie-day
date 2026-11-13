@@ -8,6 +8,7 @@ import {
   Check,
   LockKeyhole,
   Sparkles,
+  Upload,
 } from 'lucide-react';
 import {
   ACTIVITY_LEVELS,
@@ -29,6 +30,7 @@ import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { BrandMark } from '../../ui/BrandMark';
 import { Button } from '../../ui/Button';
+import { BackupImportModal } from '../backup/BackupImportModal';
 
 interface FormErrors {
   sex?: string;
@@ -55,6 +57,7 @@ export function OnboardingPage() {
   const [goal, setGoal] = useState<Goal | ''>('');
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState(false);
+  const [backupOpen, setBackupOpen] = useState(false);
 
   const preview = useMemo(() => {
     if (!sex || !activityLevel || !goal) {
@@ -265,7 +268,20 @@ export function OnboardingPage() {
           <header className="onboarding-form__header">
             <p className="eyebrow">{t('onboarding.formEyebrow')}</p>
             <h2>{t('onboarding.formTitle')}</h2>
-            <p>{t('onboarding.formDescription')}</p>
+            <p className="onboarding-form__description">
+              {t('onboarding.formDescription')}
+            </p>
+            <button
+              type="button"
+              className="text-button onboarding__restore"
+              onClick={() => setBackupOpen(true)}
+            >
+              <Upload size={15} aria-hidden="true" />
+              {t('onboarding.restoreBackup')}
+            </button>
+            <p className="onboarding__restore-hint">
+              {t('backup.startPageHint')}
+            </p>
           </header>
 
           <fieldset className="form-section">
@@ -457,6 +473,11 @@ export function OnboardingPage() {
           </div>
         </form>
       </section>
+
+      <BackupImportModal
+        open={backupOpen}
+        onClose={() => setBackupOpen(false)}
+      />
     </main>
   );
 }

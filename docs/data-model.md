@@ -94,8 +94,11 @@ interface TargetSettings {
 
 ## 3. IndexedDB 存储
 
-数据库：`calorie-day`，版本 `2`。从 v1 升级时会自动把食物 `name` 和记录
-`foodName` 转成 `names` / `foodNames`，并为现有中文文本补上 `zh-CN`。
+数据库：`calorie-day`，版本 `2`。保留从 v1 升级时将 `name` / `foodName` 转为
+`names` / `foodNames` 的兼容迁移。
+
+内置食物 `seedVersion` 当前为 `1`。检测到旧 seedVersion 时，只删除并重写
+`source: "builtin"` 的内置食物，自定义 / 导入食物、日志、个人资料和目标设置不受影响。
 
 | Object store | Key | Value |
 | --- | --- | --- |
@@ -106,7 +109,7 @@ interface TargetSettings {
 | `logs` | `YYYY-MM-DD` | `DailyLog` |
 
 `foods` 有 `by_category` 索引；`logs` 有 `by_updated_at` 索引，为未来趋势查询预留。
-v2 删除了旧的 `by_name` 索引，因为名称现在是多语言对象，不再适合作为单值索引。
+名称是多语言对象，因此不创建单值 `by_name` 索引。当前结构版本 2 的迁移会删除旧索引。
 
 ## 4. 关键决策
 
@@ -172,11 +175,41 @@ interface CalorieRepository {
   saveFoods(foods: Food[]): Promise<Food[]>;
   deleteFood(foodId: string): Promise<void>;
   getDailyLog(date: string): Promise<DailyLog | null>;
+  listDailyLogs(fromDate?: string, toDate?: string): Promise<DailyLog[]>;
   saveDailyLog(log: DailyLog): Promise<DailyLog>;
+  importBackup(payload: BackupPayload): Promise<BackupImportResult>;
 }
 ```
 
 当前实现：`IndexedDbRepository`。未来新增 `HttpCalorieRepository`，在应用入口替换单例即可。
+
+全量备份使用独立格式：
+
+```ts
+interface BackupPayload {
+  backupVersion: 1;
+  exportedAt: string;
+  logsFrom: string | null;
+  logsTo: string | null;
+  profile: UserProfile | null;
+  targetSettings: TargetSettings | null;
+  foods: Food[];
+  logs: DailyLog[];
+}
+
+interface BackupImportResult {
+  foodsAdded: number;
+  foodsSkipped: number;
+  logsAdded: number;
+  logsSkipped: number;
+  profileImported: boolean;
+  settingsImported: boolean;
+}
+```
+
+导入在单个 IndexedDB 事务中完成，采用“只补充缺失数据”的合并策略：按 ID 保留已有食物，
+按日期保留已有日志，已有个人资料和目标设置不被覆盖。导出范围只影响 `logs`；`foods`
+始终是完整食物库。
 
 ## 6. 未来 API 映射建议
 
@@ -191,6 +224,8 @@ PUT    /me/foods/:id
 DELETE /me/foods/:id
 GET    /me/logs/:date
 PUT    /me/logs/:date
+GET    /me/backup?from=YYYY-MM-DD&to=YYYY-MM-DD
+POST   /me/backup/merge
 ```
 
 `PUT /me/logs/:date` 建议接收完整 `DailyLog`（不含 `revision` 由服务端生成）或使用
@@ -240,12 +275,13 @@ TDEE = BMR × 活动系数
 - 计划摄入：新增独立的计划数据类型和 Repository 方法，不污染实际日志。
 - 趋势：利用 `logs` 的日期主键和 `by_updated_at` 索引，按范围读取。
 - 云同步：所有实体有稳定 ID 和 ISO 时间戳；每日日志有 revision。
-- 导入格式：使用 `schemaVersion` 显式版本化，可新增迁移器；当前 v2 支持多语言名称，并兼容读取 v1。
+- 导入格式：使用 `schemaVersion` 显式版本化；当前 v1 支持多语言名称，不保留旧版 `name` 字符串格式兼容。
+- 全量备份：`backupVersion` 独立版本化，包含食物库、指定日期范围的日志、资料与目标；当前为 v1。
 - 多语言名称：新增语言只需要补充数据中的 `names`，不需要修改食物结构或导入版本。
 
 ## 10. 已知未覆盖项
 
-- 每日记录的完整导出/恢复尚未实现。当前食物库导出只包含食物数据。
+- 全量备份导入采用安全合并，不提供覆盖同日期记录或在已安装设备上完整替换的选项。
 - 多标签页对食物库的编辑没有 revision 冲突保护；每日记录有。
 - 历史目标版本化尚未实现。
 - 食物名称编辑界面目前只编辑 `zh-CN`；导入的其他语言名称会保留，但还没有逐语言编辑 UI。

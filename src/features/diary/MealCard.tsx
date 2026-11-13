@@ -1,4 +1,9 @@
-import { ChevronRight, Plus } from 'lucide-react';
+import {
+  ChevronRight,
+  Coffee,
+  Droplet,
+  Plus,
+} from 'lucide-react';
 import type { FoodEntry, MealSummary, MealType } from '../../domain/types';
 import { MEAL_META } from '../../domain/constants';
 import {
@@ -16,6 +21,7 @@ interface MealCardProps {
   summary: MealSummary;
   disabled: boolean;
   onAdd: () => void;
+  onQuickAction: (action: 'coffee' | 'oil') => void;
   onEdit: (entry: FoodEntry) => void;
 }
 
@@ -25,12 +31,31 @@ export function MealCard({
   summary,
   disabled,
   onAdd,
+  onQuickAction,
   onEdit,
 }: MealCardProps) {
   const { t, locale } = useI18n();
   const meta = MEAL_META[mealType];
   const mealLabel = t(meta.labelKey);
   const hasEntries = entries.length > 0;
+  const quickAction =
+    mealType === 'breakfast'
+      ? 'coffee'
+      : mealType === 'snack'
+        ? null
+        : 'oil';
+  const quickTitle =
+    quickAction === 'coffee'
+      ? t('quickCoffee.button')
+      : t('quickOil.button');
+  const quickAria =
+    quickAction === 'coffee'
+      ? t('quickCoffee.aria', { meal: mealLabel })
+      : t('quickOil.aria', { meal: mealLabel });
+  const quickShort =
+    quickAction === 'coffee'
+      ? t('quickCoffee.short')
+      : t('quickOil.short');
 
   return (
     <article className={`meal-card meal-card--${mealType}`}>
@@ -49,16 +74,35 @@ export function MealCard({
           <span>{t('common.kcal')}</span>
         </div>
 
-        <button
-          type="button"
-          className="meal-card__add"
-          onClick={onAdd}
-          disabled={disabled}
-          aria-label={t('meals.addAria', { meal: mealLabel })}
-        >
-          <Plus size={15} aria-hidden="true" />
-          {t('common.add')}
-        </button>
+        <div className="meal-card__actions">
+          {quickAction && (
+            <button
+              type="button"
+              className={`meal-card__quick meal-card__quick--${quickAction}`}
+              onClick={() => onQuickAction(quickAction)}
+              disabled={disabled}
+              aria-label={quickAria}
+              title={quickTitle}
+            >
+              {quickAction === 'coffee' ? (
+                <Coffee size={14} aria-hidden="true" />
+              ) : (
+                <Droplet size={14} aria-hidden="true" />
+              )}
+              <span>{quickShort}</span>
+            </button>
+          )}
+          <button
+            type="button"
+            className="meal-card__add"
+            onClick={onAdd}
+            disabled={disabled}
+            aria-label={t('meals.addAria', { meal: mealLabel })}
+          >
+            <Plus size={15} aria-hidden="true" />
+            {t('common.add')}
+          </button>
+        </div>
       </header>
 
       {hasEntries && (

@@ -1,4 +1,5 @@
 import type { z } from 'zod';
+import { backupPayloadSchema } from '../domain/backup';
 import { nowIsoTimestamp } from '../domain/dates';
 import {
   dailyLogSchema,
@@ -9,6 +10,8 @@ import {
   userProfileSchema,
 } from '../domain/schemas';
 import type {
+  BackupImportResult,
+  BackupPayload,
   DailyLog,
   Food,
   TargetSettings,
@@ -51,7 +54,9 @@ export interface CalorieRepository {
   saveFoods(foods: Food[]): Promise<Food[]>;
   deleteFood(foodId: string): Promise<void>;
   getDailyLog(date: string): Promise<DailyLog | null>;
+  listDailyLogs(fromDate?: string, toDate?: string): Promise<DailyLog[]>;
   saveDailyLog(log: DailyLog): Promise<DailyLog>;
+  importBackup(payload: BackupPayload): Promise<BackupImportResult>;
   resetAllData(): Promise<void>;
 }
 
@@ -170,6 +175,10 @@ function openDatabase(dbName: string): Promise<IDBDatabase> {
   });
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
 function parseStored<T>(
   schema: z.ZodType<T, z.ZodTypeDef, unknown>,
   raw: unknown,
@@ -285,6 +294,7 @@ export class IndexedDbRepository implements CalorieRepository {
     );
 
     if (existingMeta !== undefined) {
+      await this.resetBuiltInFoods(db, existingMeta);
       return;
     }
 
@@ -312,6 +322,57 @@ export class IndexedDbRepository implements CalorieRepository {
     await transactionAsPromise(transaction);
   }
 
+  /**
+   * Beta reset for built-in data only. When an older seed version is found,
+   * built-in foods are replaced by the current seed set. Custom/imported
+   * foods, logs, profile and settings are preserved.
+   */
+  private async resetBuiltInFoods(
+    db: IDBDatabase,
+    existingMeta: unknown,
+  ): Promise<void> {
+    if (!isRecord(existingMeta)) {
+      return;
+    }
+
+    if (existingMeta.seedVersion === SEED_VERSION) {
+      return;
+    }
+
+    const transaction = db.transaction(
+      [STORES.foods, STORES.meta],
+      'readwrite',
+    );
+    const foodStore = transaction.objectStore(STORES.foods);
+    const metaStore = transaction.objectStore(STORES.meta);
+    const cursorRequest = foodStore.openCursor();
+
+    cursorRequest.onsuccess = () => {
+      const cursor = cursorRequest.result;
+      if (cursor) {
+        const food = cursor.value;
+        if (isRecord(food) && food.source === 'builtin') {
+          cursor.delete();
+        }
+        cursor.continue();
+        return;
+      }
+
+      for (const food of this.seedFoods) {
+        foodStore.put(foodSchema.parse(food));
+      }
+      metaStore.put(
+        {
+          ...existingMeta,
+          seedVersion: SEED_VERSION,
+        },
+        'app',
+      );
+    };
+
+    await transactionAsPromise(transaction);
+  }
+
   private async readSingle<T>(
     db: IDBDatabase,
     storeName: StoreName,
@@ -327,9 +388,12 @@ export class IndexedDbRepository implements CalorieRepository {
   private async readAll<T>(
     db: IDBDatabase,
     storeName: StoreName,
+    query?: IDBValidKey | IDBKeyRange,
   ): Promise<T[]> {
     const transaction = db.transaction(storeName, 'readonly');
-    const request = transaction.objectStore(storeName).getAll();
+    const store = transaction.objectStore(storeName);
+    const request =
+      query === undefined ? store.getAll() : store.getAll(query);
     const value = (await requestAsPromise(request)) as T[];
     await transactionAsPromise(transaction);
     return value;
@@ -458,6 +522,120 @@ export class IndexedDbRepository implements CalorieRepository {
       return null;
     }
     return parseStored<DailyLog>(dailyLogSchema, raw, '每日记录');
+  }
+
+  async listDailyLogs(
+    fromDate?: string,
+    toDate?: string,
+  ): Promise<DailyLog[]> {
+    await this.initialize();
+    const from = fromDate ? isoDateSchema.parse(fromDate) : undefined;
+    const to = toDate ? isoDateSchema.parse(toDate) : undefined;
+    let query: IDBKeyRange | undefined;
+
+    if (from && to) {
+      query = IDBKeyRange.bound(from, to);
+    } else if (from) {
+      query = IDBKeyRange.lowerBound(from);
+    } else if (to) {
+      query = IDBKeyRange.upperBound(to);
+    }
+
+    const db = await this.getDb();
+    const raw = await this.readAll<unknown>(db, STORES.logs, query);
+    return raw.map((item, index) =>
+      parseStored<DailyLog>(
+        dailyLogSchema,
+        item,
+        `每日记录第 ${index + 1} 条`,
+      ),
+    );
+  }
+
+  /**
+   * Merges a full backup without overwriting existing data. The transaction
+   * spans foods, logs, profile and settings so a failed import leaves the
+   * database unchanged.
+   */
+  async importBackup(payload: BackupPayload): Promise<BackupImportResult> {
+    await this.initialize();
+    const validated = backupPayloadSchema.parse(payload) as BackupPayload;
+    const db = await this.getDb();
+    const transaction = db.transaction(
+      [STORES.foods, STORES.logs, STORES.profile, STORES.settings],
+      'readwrite',
+    );
+
+    let foodsAdded = 0;
+    let foodsSkipped = 0;
+    let logsAdded = 0;
+    let logsSkipped = 0;
+    let profileImported = false;
+    let settingsImported = false;
+
+    const foodStore = transaction.objectStore(STORES.foods);
+    for (const food of validated.foods) {
+      const request = foodStore.get(food.id);
+      request.onsuccess = () => {
+        if (request.result === undefined) {
+          foodStore.put(foodSchema.parse(food));
+          foodsAdded += 1;
+        } else {
+          foodsSkipped += 1;
+        }
+      };
+    }
+
+    const logStore = transaction.objectStore(STORES.logs);
+    for (const log of validated.logs) {
+      const request = logStore.get(log.date);
+      request.onsuccess = () => {
+        if (request.result === undefined) {
+          logStore.put(dailyLogSchema.parse(log));
+          logsAdded += 1;
+        } else {
+          logsSkipped += 1;
+        }
+      };
+    }
+
+    const profileStore = transaction.objectStore(STORES.profile);
+    const profileRequest = profileStore.get('current');
+    profileRequest.onsuccess = () => {
+      if (profileRequest.result === undefined && validated.profile) {
+        profileStore.put(
+          userProfileSchema.parse(validated.profile),
+          'current',
+        );
+        profileImported = true;
+      }
+    };
+
+    const settingsStore = transaction.objectStore(STORES.settings);
+    const settingsRequest = settingsStore.get('current');
+    settingsRequest.onsuccess = () => {
+      if (
+        settingsRequest.result === undefined &&
+        validated.targetSettings
+      ) {
+        settingsStore.put(
+          targetSettingsSchema.parse(validated.targetSettings),
+          'current',
+        );
+        settingsImported = true;
+      }
+    };
+
+    await transactionAsPromise(transaction);
+
+    return {
+      foodsAdded,
+      foodsSkipped,
+      logsAdded,
+      logsSkipped,
+      profileImported,
+      settingsImported,
+    };
   }
 
   /**

@@ -14,6 +14,7 @@ import {
   StaleWriteError,
   type CalorieRepository,
 } from '../data/repository';
+import { backupPayloadSchema } from '../domain/backup';
 import {
   FOOD_CATEGORIES,
   MEAL_META,
@@ -43,6 +44,8 @@ import {
 } from '../domain/schemas';
 import { resolveTargets } from '../domain/targets';
 import type {
+  BackupImportResult,
+  BackupPayload,
   DailyLog,
   DaySummary,
   Food,
@@ -88,6 +91,11 @@ interface AppActions {
   updateFood: (foodId: string, draft: FoodDraft) => Promise<Food>;
   deleteFood: (foodId: string) => Promise<void>;
   importFoods: (foods: Food[]) => Promise<void>;
+  createBackup: (
+    from: IsoDate | null,
+    to: IsoDate | null,
+  ) => Promise<BackupPayload>;
+  importBackup: (payload: BackupPayload) => Promise<BackupImportResult>;
   selectDate: (date: IsoDate) => void;
   requestPersistence: () => Promise<void>;
   refreshStorageInfo: () => Promise<void>;
@@ -581,6 +589,69 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const createBackup = useCallback(
+    async (
+      from: IsoDate | null,
+      to: IsoDate | null,
+    ): Promise<BackupPayload> => {
+      if (savingRef.current) {
+        throw new Error(translate('toast.savingWait'));
+      }
+
+      const [storedProfile, storedSettings, storedFoods, logs] =
+        await Promise.all([
+          repository.getProfile(),
+          repository.getTargetSettings(),
+          repository.listFoods(),
+          repository.listDailyLogs(from ?? undefined, to ?? undefined),
+        ]);
+
+      return backupPayloadSchema.parse({
+        backupVersion: 1,
+        exportedAt: nowIsoTimestamp(),
+        logsFrom: from,
+        logsTo: to,
+        profile: storedProfile,
+        targetSettings: storedSettings,
+        foods: storedFoods,
+        logs,
+      }) as BackupPayload;
+    },
+    [],
+  );
+
+  const importBackup = useCallback(
+    async (payload: BackupPayload): Promise<BackupImportResult> => {
+      if (savingRef.current) {
+        throw new Error(translate('toast.saveInProgress'));
+      }
+
+      savingRef.current = true;
+      setIsSaving(true);
+
+      try {
+        const result = await repository.importBackup(payload);
+        const [storedProfile, storedSettings, storedFoods] =
+          await Promise.all([
+            repository.getProfile(),
+            repository.getTargetSettings(),
+            repository.listFoods(),
+          ]);
+
+        setProfile(storedProfile);
+        setTargetSettings(storedSettings);
+        setFoods(sortFoods(storedFoods));
+        setLogReloadToken((value) => value + 1);
+        void refreshStorageInfo();
+        return result;
+      } finally {
+        savingRef.current = false;
+        setIsSaving(false);
+      }
+    },
+    [refreshStorageInfo],
+  );
+
   const selectDate = useCallback(
     (date: IsoDate) => {
       if (!isValidIsoDate(date)) {
@@ -646,6 +717,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateFood,
       deleteFood,
       importFoods,
+      createBackup,
+      importBackup,
       selectDate,
       requestPersistence,
       refreshStorageInfo,
@@ -664,6 +737,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateFood,
       deleteFood,
       importFoods,
+      createBackup,
+      importBackup,
       selectDate,
       requestPersistence,
       refreshStorageInfo,

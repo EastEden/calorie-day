@@ -122,21 +122,6 @@ const importedServingSchema = z.object({
   grams: finiteNumber.positive().max(10_000),
 });
 
-const legacyImportedFoodSchema = z.object({
-  id: z.string().trim().min(1).max(120).optional(),
-  name: z.string().trim().min(1).max(MAX_FOOD_NAME_LENGTH),
-  category: foodCategorySchema,
-  basis: foodBasisSchema,
-  nutritionPer100g: nutritionSchema,
-  servings: z.array(importedServingSchema).max(20).optional(),
-});
-
-const legacyFoodImportSchema = z.object({
-  schemaVersion: z.literal(1),
-  exportedAt: timestampSchema.optional(),
-  foods: z.array(legacyImportedFoodSchema).min(1).max(1000),
-});
-
 export const importedFoodSchema = z.object({
   id: z.string().trim().min(1).max(120).optional(),
   names: localizedTextSchema,
@@ -148,7 +133,7 @@ export const importedFoodSchema = z.object({
 
 export const foodImportSchema = z
   .object({
-    schemaVersion: z.literal(2),
+    schemaVersion: z.literal(1),
     exportedAt: timestampSchema.optional(),
     foods: z.array(importedFoodSchema).min(1).max(1000),
   })
@@ -285,34 +270,6 @@ export interface FoodImportParseFailure {
   errors: string[];
 }
 
-function convertLegacyFoodImport(payload: {
-  schemaVersion: 1;
-  exportedAt?: string;
-  foods: {
-    id?: string;
-    name: string;
-    category: z.infer<typeof foodCategorySchema>;
-    basis: z.infer<typeof foodBasisSchema>;
-    nutritionPer100g: z.infer<typeof nutritionSchema>;
-    servings?: {
-      id?: string;
-      label: string;
-      grams: number;
-    }[];
-  }[];
-}): unknown {
-  return {
-    schemaVersion: 2,
-    exportedAt: payload.exportedAt,
-    foods: payload.foods.map(({ name, ...food }) => ({
-      ...food,
-      names: {
-        [FOOD_NAME_FALLBACK_LOCALE]: name,
-      },
-    })),
-  };
-}
-
 export function parseFoodImportJson(
   raw: string,
 ): FoodImportParseSuccess | FoodImportParseFailure {
@@ -324,26 +281,7 @@ export function parseFoodImportJson(
     return { success: false, errors: ['文件不是有效的 JSON。'] };
   }
 
-  let candidate = parsed;
-
-  // v1 is accepted for backwards compatibility. New exports are always v2.
-  if (
-    typeof parsed === 'object' &&
-    parsed !== null &&
-    'schemaVersion' in parsed &&
-    parsed.schemaVersion === 1
-  ) {
-    const legacyResult = legacyFoodImportSchema.safeParse(parsed);
-    if (!legacyResult.success) {
-      return {
-        success: false,
-        errors: getZodIssueMessages(legacyResult.error),
-      };
-    }
-    candidate = convertLegacyFoodImport(legacyResult.data);
-  }
-
-  const result = foodImportSchema.safeParse(candidate);
+  const result = foodImportSchema.safeParse(parsed);
 
   if (!result.success) {
     return { success: false, errors: getZodIssueMessages(result.error) };

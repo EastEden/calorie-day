@@ -43,6 +43,30 @@ function makeSeedFood(input: SeedFoodInput): Food {
   };
 }
 
+const PEANUT_OIL = makeSeedFood({
+  id: 'peanut-oil',
+  names: { 'zh-CN': '花生油' },
+  category: 'fat_nut_condiment',
+  basis: 'as_sold',
+  kcal: 899,
+  proteinG: 0,
+  carbsG: 0,
+  fatG: 100,
+  servings: [{ label: '汤匙', grams: 10 }],
+});
+
+const BLACK_COFFEE = makeSeedFood({
+  id: 'black-coffee',
+  names: { 'zh-CN': '黑咖啡（无糖）' },
+  category: 'other',
+  basis: 'as_sold',
+  kcal: 1,
+  proteinG: 0.1,
+  carbsG: 0,
+  fatG: 0,
+  servings: [{ label: '杯', grams: 240 }],
+});
+
 export const SEED_FOODS: Food[] = [
   // 健身蛋白质
   makeSeedFood({
@@ -337,7 +361,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'firm-tofu',
-    names: { 'zh-CN': '北豆腐' },
+    names: { 'zh-CN': '老豆腐' },
     category: 'egg_dairy_soy',
     basis: 'as_sold',
     kcal: 116,
@@ -606,6 +630,7 @@ export const SEED_FOODS: Food[] = [
     fatG: 100,
     servings: [{ label: '汤匙', grams: 10 }],
   }),
+  PEANUT_OIL,
   makeSeedFood({
     id: 'peanut-butter',
     names: { 'zh-CN': '花生酱' },
@@ -639,4 +664,5 @@ export const SEED_FOODS: Food[] = [
     fatG: 0,
     servings: [{ label: '汤匙', grams: 21 }],
   }),
+  BLACK_COFFEE,
 ];

@@ -1,15 +1,15 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://calorie-day.local/schemas/food-import-v2.json",
-  "title": "每日热量食物库导入格式 v2",
-  "description": "第二版食物库 JSON 导入格式。营养数据按每 100g 保存，食物名称使用语言代码对象，且必须至少包含 zh-CN。旧版 v1 文件仍可导入，应用会自动转换为 v2。",
+  "$id": "https://calorie-day.local/schemas/food-import-v1.json",
+  "title": "每日热量食物库导入格式 v1",
+  "description": "食物库 JSON 导入格式 v1。营养数据按每 100g 保存，食物名称使用语言代码对象，且必须至少包含 zh-CN。",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "foods"],
   "properties": {
     "schemaVersion": {
-      "const": 2,
-      "description": "格式版本，当前导出为 2"
+      "const": 1,
+      "description": "格式版本，当前导出为 1"
     },
     "exportedAt": {
       "type": "string",

@@ -206,6 +206,54 @@ export const zhCN = {
   'portion.gramsDetail': '{{grams}}g',
   'portion.submit': '保存份量',
 
+  // Quick cooking oil
+  'quickOil.button': '快速加油',
+  'quickOil.short': '油',
+  'quickOil.aria': '为{{meal}}快速加入烹饪用油',
+  'quickOil.title': '快速加入烹饪用油',
+  'quickOil.description': '为{{meal}}记录烹饪用油，不必再搜索食物库。',
+  'quickOil.oil': '食用油',
+  'quickOil.amount': '用量',
+  'quickOil.amountAria': '选择用油量',
+  'quickOil.gramsAria': '自定义克数',
+  'quickOil.quickAmount': '{{value}}g',
+  'quickOil.amountHint': '默认 5g，可快速调整。',
+  'quickOil.preview': '本次摄入',
+  'quickOil.previewDetail': '{{kcal}} kcal · 脂肪 {{fat}}g',
+  'quickOil.submit': '加入{{meal}}',
+  'quickOil.invalid': '请输入大于 0 的有效克数。',
+  'quickOil.noOilsTitle': '还没有可用的食用油',
+  'quickOil.noOilsBody':
+    '请先在食物库中添加分类为“坚果油脂”的食用油，例如橄榄油、花生油或菜籽油。',
+  'quickOil.noOilsHint': '添加后回到这里，即可快速记录用油。',
+  'quickOil.noSelection': '请选择一种食用油。',
+
+  // Quick coffee
+  'quickCoffee.button': '快速咖啡',
+  'quickCoffee.short': '咖啡',
+  'quickCoffee.aria': '为{{meal}}快速记录咖啡',
+  'quickCoffee.title': '快速记录咖啡',
+  'quickCoffee.description':
+    '为{{meal}}记录一杯黑咖啡，可按常见份量加入配料。',
+  'quickCoffee.base': '黑咖啡',
+  'quickCoffee.baseDetail': '1 杯 · 240g · {{kcal}} kcal',
+  'quickCoffee.addons': '可选配料',
+  'quickCoffee.optionDetail': '1 份 · {{grams}}g · {{kcal}} kcal',
+  'quickCoffee.portionHint':
+    '每项按 1 份计算：牛奶 30g、糖 5g、代糖 1g、咖啡奶油 10g。',
+  'quickCoffee.milk': '牛奶',
+  'quickCoffee.sugar': '糖',
+  'quickCoffee.sweetener': '代糖',
+  'quickCoffee.cream': '咖啡奶油',
+  'quickCoffee.preview': '本次摄入',
+  'quickCoffee.previewDetail':
+    '{{grams}}g · 碳水 {{carbs}}g · 蛋白 {{protein}}g · 脂肪 {{fat}}g',
+  'quickCoffee.submit': '加入{{meal}}',
+  'quickCoffee.cup': '杯',
+  'quickCoffee.blackName': '黑咖啡',
+  'quickCoffee.nameWithAddons': '咖啡（{{addons}}）',
+  'quickCoffee.separator': '、',
+
   // Entry editor
   'entry.title': '编辑记录',
   'entry.description': '{{meal}} · {{name}} · 当前 {{kcal}} kcal',
@@ -313,7 +361,7 @@ export const zhCN = {
   'import.ready':
     '校验通过，可以导入。导入过程会一次性写入，失败不会留下半份数据。',
   'import.schemaNote':
-    'JSON 格式版本为 2，食物名称使用语言代码对象并至少包含 zh-CN；可附加其他语言。旧版 v1 文件仍可导入，导出统一为 v2。完整字段可在下载的模板中查看。',
+    'JSON 格式版本为 1，食物名称使用语言代码对象并至少包含 zh-CN；可附加其他语言。完整字段可在下载的模板中查看。',
 
   // Settings page
   'settings.eyebrow': '让目标更像你',
@@ -371,6 +419,58 @@ export const zhCN = {
   'target.saveManual': '保存手动目标',
   'target.invalid': '请填写有效的目标热量和三大营养素。',
   'target.saveFailed': '保存失败，请重试。',
+
+  // Full backup
+  'backup.eyebrow': '数据安全',
+  'backup.title': '全量备份',
+  'backup.description':
+    '导出完整食物库和所选时间范围内的每日记录，或从备份恢复。',
+  'backup.range': '饮食记录范围',
+  'backup.range7': '近 7 天',
+  'backup.range30': '近 30 天',
+  'backup.range90': '近 90 天',
+  'backup.rangeAll': '全部',
+  'backup.rangeCustom': '自定义',
+  'backup.rangeHint': '食物库始终全量导出；饮食记录默认近 7 天。',
+  'backup.rangeAria': '选择饮食记录导出范围',
+  'backup.from': '开始日期',
+  'backup.to': '结束日期',
+  'backup.export': '导出全量备份',
+  'backup.exporting': '正在导出…',
+  'backup.exportFailed': '导出失败，请重试。',
+  'backup.invalidRange': '请选择有效的开始和结束日期。',
+  'backup.importTitle': '从备份恢复',
+  'backup.importDescription':
+    '补充食物库、每日记录、个人资料与目标设置。',
+  'backup.importButton': '选择备份文件',
+  'backup.importNote':
+    '只补充当前不存在的数据：同 ID 食物、同日期记录、个人资料和目标设置不会被覆盖。',
+  'backup.modalTitle': '导入全量备份',
+  'backup.modalDescription': '选择由「导出全量备份」生成的 JSON 文件。',
+  'backup.chooseFile': '选择备份文件',
+  'backup.dropHint': '点击选择，或将备份 JSON 拖到这里',
+  'backup.fileTooLarge':
+    '文件超过 25MB，请确认是完整的 JSON 备份。',
+  'backup.unreadable': '无法读取这个文件，请重新选择。',
+  'backup.invalidTitle': '备份文件无法导入',
+  'backup.moreIssues': '另外还有 {{n}} 个问题未显示。',
+  'backup.foods': '食物',
+  'backup.logs': '饮食记录',
+  'backup.rangeValue': '{{from}} 至 {{to}}',
+  'backup.noLogs': '没有饮食记录',
+  'backup.profile': '个人资料',
+  'backup.profileIncluded': '包含',
+  'backup.profileNotIncluded': '不包含',
+  'backup.mergeNotice':
+    '导入只补充缺失内容，不会覆盖已有食物、同日期记录、个人资料或目标设置。',
+  'backup.ready':
+    '校验通过，可以导入。导入会一次性写入，失败不会留下半份数据。',
+  'backup.importAction': '导入备份',
+  'backup.importing': '正在导入…',
+  'backup.importFailed': '导入失败，请重试。',
+  'backup.schemaNote':
+    '备份包含 backupVersion、完整食物库、所选日期的每日记录，以及可选的个人资料与目标设置。',
+  'backup.startPageHint': '换设备或清空数据后，可在这里恢复完整备份。',
 
   // Storage card
   'storage.eyebrow': '自动保存',
@@ -448,6 +548,7 @@ export const zhCN = {
   'onboarding.summary': '每日推荐',
   'onboarding.pendingTarget': '待生成',
   'onboarding.submit': '生成目标，开始记录',
+  'onboarding.restoreBackup': '已有备份？从备份恢复',
   'onboarding.saveFailed': '保存失败，请确认浏览器允许本地存储后再试。',
 
   // Share
@@ -507,6 +608,12 @@ export const zhCN = {
   'toast.noFoodToUpdate': '没有找到要修改的食物。',
   'toast.saveInProgress': '正在保存，请稍后再试。',
   'toast.templateDownloaded': '示例模板已下载。',
+  'toast.backupExported':
+    '已导出 {{foods}} 项食物和 {{logs}} 天饮食记录。',
+  'toast.backupImported':
+    '已导入 {{foods}} 项食物和 {{logs}} 天饮食记录。',
+  'toast.backupSkipped':
+    '{{foods}} 项食物和 {{logs}} 天记录已存在，已保留当前数据。',
 
   // UI building blocks
   'ui.closeAria': '关闭',

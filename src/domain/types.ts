@@ -164,6 +164,31 @@ export interface StorageInfo {
   quotaBytes: number | null;
 }
 
+/**
+ * Full local backup. Contains the complete food library and a selectable
+ * slice of daily logs; profile/settings are optional so older or partial
+ * backups can still be read.
+ */
+export interface BackupPayload {
+  backupVersion: 1;
+  exportedAt: string;
+  logsFrom: IsoDate | null;
+  logsTo: IsoDate | null;
+  profile: UserProfile | null;
+  targetSettings: TargetSettings | null;
+  foods: Food[];
+  logs: DailyLog[];
+}
+
+export interface BackupImportResult {
+  foodsAdded: number;
+  foodsSkipped: number;
+  logsAdded: number;
+  logsSkipped: number;
+  profileImported: boolean;
+  settingsImported: boolean;
+}
+
 export interface ImportedFoodInput {
   id?: string;
   names: LocalizedText;
