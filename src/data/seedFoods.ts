@@ -5,7 +5,7 @@ import type {
   LocalizedText,
 } from '../domain/types';
 
-export const SEED_VERSION = 3;
+export const SEED_VERSION = 4;
 const SEED_TIMESTAMP = '2025-01-01T00:00:00.000Z';
 
 interface SeedFoodInput {
@@ -74,7 +74,7 @@ const BLACK_COFFEE = makeSeedFood({
 
 export const SEED_FOOD_ADDITIONS: SeedFoodAddition[] = [
   { version: 2, food: PEANUT_OIL },
-  { version: 3, food: BLACK_COFFEE },
+  { version: 4, food: BLACK_COFFEE },
 ];
 
 export const SEED_FOODS: Food[] = [

@@ -249,7 +249,7 @@ export const targetSettingsSchema = z.object({
 
 export const appMetaSchema = z.object({
   schemaVersion: z.literal(2),
-  seedVersion: z.literal(3),
+  seedVersion: z.literal(4),
   createdAt: timestampSchema,
 });
 

@@ -194,6 +194,46 @@ describe('IndexedDbRepository', () => {
     expect((await reopened.listFoods()).length).toBe(firstCount);
   });
 
+  it('repairs a database whose seed version advanced without black coffee', async () => {
+    dbName = `calorie-test-coffee-repair-${Date.now()}-${Math.random()}`;
+    const repo = createRepository();
+    await repo.initialize();
+
+    const db = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(dbName);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+
+    await new Promise<void>((resolve, reject) => {
+      const transaction = db.transaction(
+        ['meta', 'foods'],
+        'readwrite',
+      );
+      transaction.objectStore('foods').delete('builtin-black-coffee');
+      const metaStore = transaction.objectStore('meta');
+      const get = metaStore.get('app');
+      get.onsuccess = () => {
+        metaStore.put(
+          { ...get.result, seedVersion: 3 },
+          'app',
+        );
+      };
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    db.close();
+    await repo.close();
+
+    const reopened = createRepository();
+    await reopened.initialize();
+    const foods = await reopened.listFoods();
+
+    expect(
+      foods.some((food) => food.id === 'builtin-black-coffee'),
+    ).toBe(true);
+  });
+
   it('persists profile and target settings across repository instances', async () => {
     dbName = `calorie-test-profile-${Date.now()}-${Math.random()}`;
     const repo = createRepository();
@@ -457,7 +497,7 @@ describe('IndexedDbRepository', () => {
       },
     );
     expect(meta?.schemaVersion).toBe(2);
-    expect(meta?.seedVersion).toBe(3);
+    expect(meta?.seedVersion).toBe(4);
     rawDb.close();
   });
 

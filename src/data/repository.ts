@@ -39,7 +39,7 @@ type StoreName = (typeof STORES)[keyof typeof STORES];
 
 interface AppMeta {
   schemaVersion: 2;
-  seedVersion: 3;
+  seedVersion: 4;
   createdAt: string;
 }
 
