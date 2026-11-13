@@ -14,7 +14,7 @@ const existingZhName = existing.names['zh-CN'];
 
 function makePayload(names: string[]) {
   return foodImportSchema.parse({
-    schemaVersion: 2,
+    schemaVersion: 1,
     foods: names.map((name) => ({
       names: { 'zh-CN': name },
       category: 'protein',
@@ -57,7 +57,7 @@ describe('foodTransfer', () => {
 
   it('assembles new foods with generated ids and serving ids', () => {
     const payload = foodImportSchema.parse({
-      schemaVersion: 2,
+      schemaVersion: 1,
       foods: [
         {
           names: {
@@ -98,7 +98,7 @@ describe('foodTransfer', () => {
       ],
     };
     const exportPayload = buildFoodExportPayload([food]);
-    expect(exportPayload.schemaVersion).toBe(2);
+    expect(exportPayload.schemaVersion).toBe(1);
     expect(exportPayload.foods[0]?.names['en-US']).toBe(
       'Exported chicken breast',
     );
@@ -106,13 +106,13 @@ describe('foodTransfer', () => {
     expect(parsed.success).toBe(true);
   });
 
-  it('builds a v2 template with a required zh-CN name', () => {
+  it('builds a v1 template with a required zh-CN name', () => {
     const template = JSON.parse(buildFoodImportTemplate()) as {
       schemaVersion: number;
       foods: { names: Record<string, string> }[];
     };
 
-    expect(template.schemaVersion).toBe(2);
+    expect(template.schemaVersion).toBe(1);
     expect(template.foods[0]?.names['zh-CN']).toBe('示例：自制鸡胸肉丸');
     expect(foodImportSchema.safeParse(template).success).toBe(true);
   });

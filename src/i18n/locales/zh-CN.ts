@@ -335,7 +335,7 @@ export const zhCN = {
   'import.ready':
     '校验通过，可以导入。导入过程会一次性写入，失败不会留下半份数据。',
   'import.schemaNote':
-    'JSON 格式版本为 2，食物名称使用语言代码对象并至少包含 zh-CN；可附加其他语言。旧版 v1 文件仍可导入，导出统一为 v2。完整字段可在下载的模板中查看。',
+    'JSON 格式版本为 1，食物名称使用语言代码对象并至少包含 zh-CN；可附加其他语言。完整字段可在下载的模板中查看。',
 
   // Settings page
   'settings.eyebrow': '让目标更像你',

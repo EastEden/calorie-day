@@ -129,12 +129,12 @@ export function materializeImportedFoods(
 }
 
 export function buildFoodExportPayload(foods: Food[]): {
-  schemaVersion: 2;
+  schemaVersion: 1;
   exportedAt: string;
   foods: ImportedFoodInput[];
 } {
   return {
-    schemaVersion: 2,
+    schemaVersion: 1,
     exportedAt: nowIsoTimestamp(),
     foods: foods.map((food) => ({
       id: food.id,
@@ -157,7 +157,7 @@ export function stringifyFoodExport(foods: Food[]): string {
 
 export function buildFoodImportTemplate(): string {
   const template = {
-    schemaVersion: 2,
+    schemaVersion: 1,
     exportedAt: nowIsoTimestamp(),
     foods: [
       {

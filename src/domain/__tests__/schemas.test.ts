@@ -29,10 +29,10 @@ describe('food import schema', () => {
     ).toBe(true);
   });
 
-  it('parses a valid v2 JSON payload with extra locales', () => {
+  it('parses a valid v1 JSON payload with extra locales', () => {
     const result = parseFoodImportJson(
       JSON.stringify({
-        schemaVersion: 2,
+        schemaVersion: 1,
         foods: [
           {
             names: {
@@ -50,7 +50,7 @@ describe('food import schema', () => {
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.schemaVersion).toBe(2);
+      expect(result.data.schemaVersion).toBe(1);
       expect(result.data.foods[0]?.names['zh-CN']).toBe('测试鸡胸肉丸');
       expect(result.data.foods[0]?.names['en-US']).toBe(
         'Test chicken meatballs',
@@ -59,7 +59,7 @@ describe('food import schema', () => {
     }
   });
 
-  it('accepts legacy v1 payloads and converts the name to zh-CN', () => {
+  it('rejects pre-localization name-string payloads', () => {
     const result = parseFoodImportJson(
       JSON.stringify({
         schemaVersion: 1,
@@ -74,19 +74,13 @@ describe('food import schema', () => {
       }),
     );
 
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.data.schemaVersion).toBe(2);
-      expect(result.data.foods[0]?.names).toEqual({
-        'zh-CN': '旧版鸡胸肉',
-      });
-    }
+    expect(result.success).toBe(false);
   });
 
   it('rejects names without zh-CN', () => {
     const result = parseFoodImportJson(
       JSON.stringify({
-        schemaVersion: 2,
+        schemaVersion: 1,
         foods: [
           {
             names: { 'en-US': 'Only English' },
@@ -131,7 +125,7 @@ describe('food import schema', () => {
   it('rejects missing nutrition values with a field path', () => {
     const result = parseFoodImportJson(
       JSON.stringify({
-        schemaVersion: 2,
+        schemaVersion: 1,
         foods: [
           {
             names: { 'zh-CN': '坏数据' },
@@ -162,7 +156,7 @@ describe('food import schema', () => {
       },
     };
     const result = parseFoodImportJson(
-      JSON.stringify({ schemaVersion: 2, foods: [food, { ...food }] }),
+      JSON.stringify({ schemaVersion: 1, foods: [food, { ...food }] }),
     );
 
     expect(result.success).toBe(false);
@@ -174,7 +168,7 @@ describe('food import schema', () => {
   it('rejects an unsupported schema version', () => {
     const result = parseFoodImportJson(
       JSON.stringify({
-        schemaVersion: 3,
+        schemaVersion: 2,
         foods: [
           {
             names: { 'zh-CN': '未来食物' },
@@ -188,9 +182,9 @@ describe('food import schema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('validates the exported v2 payload', () => {
+  it('validates the exported v1 payload', () => {
     const result = foodImportSchema.safeParse({
-      schemaVersion: 2,
+      schemaVersion: 1,
       foods: [
         {
           names: { 'zh-CN': '导出食物' },
