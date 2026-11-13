@@ -94,8 +94,11 @@ interface TargetSettings {
 
 ## 3. IndexedDB 存储
 
-数据库：`calorie-day`，版本 `2`。从 v1 升级时会自动把食物 `name` 和记录
-`foodName` 转成 `names` / `foodNames`，并为现有中文文本补上 `zh-CN`。
+数据库：`calorie-day`，版本 `2`。保留从 v1 升级时将 `name` / `foodName` 转为
+`names` / `foodNames` 的兼容迁移。
+
+内置食物 `seedVersion` 当前为 `1`。检测到旧 seedVersion 时，只删除并重写
+`source: "builtin"` 的内置食物，自定义 / 导入食物、日志、个人资料和目标设置不受影响。
 
 | Object store | Key | Value |
 | --- | --- | --- |
@@ -106,7 +109,7 @@ interface TargetSettings {
 | `logs` | `YYYY-MM-DD` | `DailyLog` |
 
 `foods` 有 `by_category` 索引；`logs` 有 `by_updated_at` 索引，为未来趋势查询预留。
-v2 删除了旧的 `by_name` 索引，因为名称现在是多语言对象，不再适合作为单值索引。
+名称是多语言对象，因此不创建单值 `by_name` 索引。当前结构版本 2 的迁移会删除旧索引。
 
 ## 4. 关键决策
 

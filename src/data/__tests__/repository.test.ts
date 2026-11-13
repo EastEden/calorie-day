@@ -194,10 +194,19 @@ describe('IndexedDbRepository', () => {
     expect((await reopened.listFoods()).length).toBe(firstCount);
   });
 
-  it('repairs a database whose seed version advanced without black coffee', async () => {
-    dbName = `calorie-test-coffee-repair-${Date.now()}-${Math.random()}`;
+  it('resets only built-in foods when the seed version changes', async () => {
+    dbName = `calorie-test-seed-reset-${Date.now()}-${Math.random()}`;
     const repo = createRepository();
     await repo.initialize();
+
+    const customFood: Food = {
+      ...SEED_FOODS[0]!,
+      id: 'custom-keep',
+      names: { 'zh-CN': '保留的自定义食物' },
+      source: 'custom',
+    };
+    await repo.saveFood(customFood);
+    await repo.saveDailyLog(makeLog('2026-11-13'));
 
     const db = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open(dbName);
@@ -215,7 +224,7 @@ describe('IndexedDbRepository', () => {
       const get = metaStore.get('app');
       get.onsuccess = () => {
         metaStore.put(
-          { ...get.result, seedVersion: 3 },
+          { ...get.result, seedVersion: 4 },
           'app',
         );
       };
@@ -229,9 +238,14 @@ describe('IndexedDbRepository', () => {
     await reopened.initialize();
     const foods = await reopened.listFoods();
 
+    expect(foods).toHaveLength(57);
     expect(
       foods.some((food) => food.id === 'builtin-black-coffee'),
     ).toBe(true);
+    expect(
+      foods.some((food) => food.id === 'custom-keep'),
+    ).toBe(true);
+    expect(await reopened.getDailyLog('2026-11-13')).not.toBeNull();
   });
 
   it('persists profile and target settings across repository instances', async () => {
@@ -460,16 +474,10 @@ describe('IndexedDbRepository', () => {
     await repo.initialize();
 
     const foods = await repo.listFoods();
-    expect(foods).toHaveLength(3);
+    expect(foods).toHaveLength(1);
     const legacyFood = foods.find((food) => food.id === 'legacy-food');
     expect(legacyFood?.names).toEqual({ 'zh-CN': '旧版鸡胸肉' });
     expect('name' in (legacyFood ?? {})).toBe(false);
-    expect(foods.some((food) => food.id === 'builtin-peanut-oil')).toBe(
-      true,
-    );
-    expect(foods.some((food) => food.id === 'builtin-black-coffee')).toBe(
-      true,
-    );
 
     const log = await repo.getDailyLog('2026-11-13');
     expect(log?.meals.breakfast[0]?.foodNames).toEqual({
@@ -497,7 +505,7 @@ describe('IndexedDbRepository', () => {
       },
     );
     expect(meta?.schemaVersion).toBe(2);
-    expect(meta?.seedVersion).toBe(4);
+    expect(meta?.seedVersion).toBe(1);
     rawDb.close();
   });
 

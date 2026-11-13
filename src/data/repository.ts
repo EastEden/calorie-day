@@ -18,11 +18,7 @@ import type {
   UserProfile,
 } from '../domain/types';
 import { upgradeDatabaseV1ToV2 } from './migrations';
-import {
-  SEED_FOODS,
-  SEED_FOOD_ADDITIONS,
-  SEED_VERSION,
-} from './seedFoods';
+import { SEED_FOODS, SEED_VERSION } from './seedFoods';
 
 const DEFAULT_DB_NAME = 'calorie-day';
 const DB_VERSION = 2;
@@ -39,7 +35,7 @@ type StoreName = (typeof STORES)[keyof typeof STORES];
 
 interface AppMeta {
   schemaVersion: 2;
-  seedVersion: 4;
+  seedVersion: 1;
   createdAt: string;
 }
 
@@ -298,7 +294,7 @@ export class IndexedDbRepository implements CalorieRepository {
     );
 
     if (existingMeta !== undefined) {
-      await this.applySeedAdditions(db, existingMeta);
+      await this.resetBuiltInFoods(db, existingMeta);
       return;
     }
 
@@ -327,11 +323,11 @@ export class IndexedDbRepository implements CalorieRepository {
   }
 
   /**
-   * Adds newly introduced built-in foods without restoring built-ins the user
-   * deleted before the seed update. The meta seedVersion prevents this from
-   * running again after the additions have been applied.
+   * Beta reset for built-in data only. When an older seed version is found,
+   * built-in foods are replaced by the current seed set. Custom/imported
+   * foods, logs, profile and settings are preserved.
    */
-  private async applySeedAdditions(
+  private async resetBuiltInFoods(
     db: IDBDatabase,
     existingMeta: unknown,
   ): Promise<void> {
@@ -339,39 +335,41 @@ export class IndexedDbRepository implements CalorieRepository {
       return;
     }
 
-    const currentSeedVersion =
-      typeof existingMeta.seedVersion === 'number'
-        ? existingMeta.seedVersion
-        : 1;
-    if (currentSeedVersion >= SEED_VERSION) {
+    if (existingMeta.seedVersion === SEED_VERSION) {
       return;
     }
 
-    const additions = SEED_FOOD_ADDITIONS.filter(
-      (addition) => addition.version > currentSeedVersion,
-    );
     const transaction = db.transaction(
       [STORES.foods, STORES.meta],
       'readwrite',
     );
     const foodStore = transaction.objectStore(STORES.foods);
+    const metaStore = transaction.objectStore(STORES.meta);
+    const cursorRequest = foodStore.openCursor();
 
-    for (const addition of additions) {
-      const request = foodStore.get(addition.food.id);
-      request.onsuccess = () => {
-        if (request.result === undefined) {
-          foodStore.put(foodSchema.parse(addition.food));
+    cursorRequest.onsuccess = () => {
+      const cursor = cursorRequest.result;
+      if (cursor) {
+        const food = cursor.value;
+        if (isRecord(food) && food.source === 'builtin') {
+          cursor.delete();
         }
-      };
-    }
+        cursor.continue();
+        return;
+      }
 
-    transaction.objectStore(STORES.meta).put(
-      {
-        ...existingMeta,
-        seedVersion: SEED_VERSION,
-      },
-      'app',
-    );
+      for (const food of this.seedFoods) {
+        foodStore.put(foodSchema.parse(food));
+      }
+      metaStore.put(
+        {
+          ...existingMeta,
+          seedVersion: SEED_VERSION,
+        },
+        'app',
+      );
+    };
+
     await transactionAsPromise(transaction);
   }
 

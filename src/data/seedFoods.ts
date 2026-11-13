@@ -5,7 +5,7 @@ import type {
   LocalizedText,
 } from '../domain/types';
 
-export const SEED_VERSION = 4;
+export const SEED_VERSION = 1;
 const SEED_TIMESTAMP = '2025-01-01T00:00:00.000Z';
 
 interface SeedFoodInput {
@@ -43,11 +43,6 @@ function makeSeedFood(input: SeedFoodInput): Food {
   };
 }
 
-export interface SeedFoodAddition {
-  version: number;
-  food: Food;
-}
-
 const PEANUT_OIL = makeSeedFood({
   id: 'peanut-oil',
   names: { 'zh-CN': '花生油' },
@@ -71,11 +66,6 @@ const BLACK_COFFEE = makeSeedFood({
   fatG: 0,
   servings: [{ label: '杯', grams: 240 }],
 });
-
-export const SEED_FOOD_ADDITIONS: SeedFoodAddition[] = [
-  { version: 2, food: PEANUT_OIL },
-  { version: 4, food: BLACK_COFFEE },
-];
 
 export const SEED_FOODS: Food[] = [
   // 健身蛋白质
