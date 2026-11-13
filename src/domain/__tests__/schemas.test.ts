@@ -20,9 +20,12 @@ describe('food import schema', () => {
         foodSchema.parse(food);
       }
     }).not.toThrow();
-    expect(SEED_FOODS).toHaveLength(55);
+    expect(SEED_FOODS).toHaveLength(56);
     expect(
       SEED_FOODS.some((food) => food.names['zh-CN'] === '花生油'),
+    ).toBe(true);
+    expect(
+      SEED_FOODS.some((food) => food.names['zh-CN'] === '黑咖啡（无糖）'),
     ).toBe(true);
   });
 

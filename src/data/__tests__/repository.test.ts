@@ -420,11 +420,14 @@ describe('IndexedDbRepository', () => {
     await repo.initialize();
 
     const foods = await repo.listFoods();
-    expect(foods).toHaveLength(2);
+    expect(foods).toHaveLength(3);
     const legacyFood = foods.find((food) => food.id === 'legacy-food');
     expect(legacyFood?.names).toEqual({ 'zh-CN': '旧版鸡胸肉' });
     expect('name' in (legacyFood ?? {})).toBe(false);
     expect(foods.some((food) => food.id === 'builtin-peanut-oil')).toBe(
+      true,
+    );
+    expect(foods.some((food) => food.id === 'builtin-black-coffee')).toBe(
       true,
     );
 
@@ -454,7 +457,7 @@ describe('IndexedDbRepository', () => {
       },
     );
     expect(meta?.schemaVersion).toBe(2);
-    expect(meta?.seedVersion).toBe(2);
+    expect(meta?.seedVersion).toBe(3);
     rawDb.close();
   });
 
