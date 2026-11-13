@@ -41,7 +41,7 @@ export function createFoodEntry(
   return {
     id: createId('entry'),
     foodId: food.id,
-    foodName: food.name,
+    foodNames: { ...food.names },
     amountGrams: amount.grams,
     enteredQuantity: amount.enteredQuantity,
     enteredUnit: amount.enteredUnit,

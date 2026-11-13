@@ -2,6 +2,7 @@ import type {
   Food,
   FoodBasis,
   FoodCategory,
+  LocalizedText,
 } from '../domain/types';
 
 export const SEED_VERSION = 1;
@@ -9,7 +10,7 @@ const SEED_TIMESTAMP = '2025-01-01T00:00:00.000Z';
 
 interface SeedFoodInput {
   id: string;
-  name: string;
+  names: LocalizedText;
   category: FoodCategory;
   basis: FoodBasis;
   kcal: number;
@@ -22,7 +23,7 @@ interface SeedFoodInput {
 function makeSeedFood(input: SeedFoodInput): Food {
   return {
     id: `builtin-${input.id}`,
-    name: input.name,
+    names: input.names,
     category: input.category,
     basis: input.basis,
     nutritionPer100g: {
@@ -46,7 +47,7 @@ export const SEED_FOODS: Food[] = [
   // 健身蛋白质
   makeSeedFood({
     id: 'chicken-breast-raw',
-    name: '鸡胸肉（生）',
+    names: { 'zh-CN': '鸡胸肉（生）' },
     category: 'protein',
     basis: 'raw',
     kcal: 120,
@@ -57,7 +58,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'chicken-thigh-skinless-raw',
-    name: '鸡腿肉（去皮，生）',
+    names: { 'zh-CN': '鸡腿肉（去皮，生）' },
     category: 'protein',
     basis: 'raw',
     kcal: 119,
@@ -68,7 +69,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'salmon-raw',
-    name: '三文鱼（生）',
+    names: { 'zh-CN': '三文鱼（生）' },
     category: 'protein',
     basis: 'raw',
     kcal: 208,
@@ -79,7 +80,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'shrimp-raw',
-    name: '虾仁（生）',
+    names: { 'zh-CN': '虾仁（生）' },
     category: 'protein',
     basis: 'raw',
     kcal: 99,
@@ -92,7 +93,7 @@ export const SEED_FOODS: Food[] = [
   // 常见主食
   makeSeedFood({
     id: 'white-rice-raw',
-    name: '大米（生）',
+    names: { 'zh-CN': '大米（生）' },
     category: 'staple',
     basis: 'dry',
     kcal: 365,
@@ -103,7 +104,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'brown-rice-raw',
-    name: '糙米（生）',
+    names: { 'zh-CN': '糙米（生）' },
     category: 'staple',
     basis: 'dry',
     kcal: 370,
@@ -114,7 +115,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'millet-raw',
-    name: '小米（生）',
+    names: { 'zh-CN': '小米（生）' },
     category: 'staple',
     basis: 'dry',
     kcal: 361,
@@ -125,7 +126,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'quinoa-raw',
-    name: '藜麦（生）',
+    names: { 'zh-CN': '藜麦（生）' },
     category: 'staple',
     basis: 'dry',
     kcal: 368,
@@ -136,7 +137,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'oats-dry',
-    name: '燕麦片（干）',
+    names: { 'zh-CN': '燕麦片（干）' },
     category: 'staple',
     basis: 'dry',
     kcal: 389,
@@ -147,7 +148,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'wheat-noodles-dry',
-    name: '面条（干）',
+    names: { 'zh-CN': '面条（干）' },
     category: 'staple',
     basis: 'dry',
     kcal: 370,
@@ -158,7 +159,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'soba-dry',
-    name: '荞麦面（干）',
+    names: { 'zh-CN': '荞麦面（干）' },
     category: 'staple',
     basis: 'dry',
     kcal: 340,
@@ -169,7 +170,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'whole-wheat-pasta-dry',
-    name: '全麦意面（干）',
+    names: { 'zh-CN': '全麦意面（干）' },
     category: 'staple',
     basis: 'dry',
     kcal: 343,
@@ -180,7 +181,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'rice-noodles-dry',
-    name: '米粉（干）',
+    names: { 'zh-CN': '米粉（干）' },
     category: 'staple',
     basis: 'dry',
     kcal: 360,
@@ -191,7 +192,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'whole-wheat-bread',
-    name: '全麦面包',
+    names: { 'zh-CN': '全麦面包' },
     category: 'staple',
     basis: 'as_sold',
     kcal: 247,
@@ -202,7 +203,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'mantou',
-    name: '馒头',
+    names: { 'zh-CN': '馒头' },
     category: 'staple',
     basis: 'as_sold',
     kcal: 221,
@@ -213,7 +214,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'sweet-potato-raw',
-    name: '红薯（生）',
+    names: { 'zh-CN': '红薯（生）' },
     category: 'staple',
     basis: 'raw',
     kcal: 86,
@@ -224,7 +225,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'potato-raw',
-    name: '土豆（生）',
+    names: { 'zh-CN': '土豆（生）' },
     category: 'staple',
     basis: 'raw',
     kcal: 77,
@@ -235,7 +236,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'sweet-corn-fresh',
-    name: '玉米（鲜）',
+    names: { 'zh-CN': '玉米（鲜）' },
     category: 'staple',
     basis: 'raw',
     kcal: 86,
@@ -246,7 +247,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'chinese-yam-raw',
-    name: '山药（生）',
+    names: { 'zh-CN': '山药（生）' },
     category: 'staple',
     basis: 'raw',
     kcal: 57,
@@ -257,7 +258,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'pumpkin-raw',
-    name: '南瓜（生）',
+    names: { 'zh-CN': '南瓜（生）' },
     category: 'staple',
     basis: 'raw',
     kcal: 26,
@@ -270,7 +271,7 @@ export const SEED_FOODS: Food[] = [
   // 蛋奶豆制品
   makeSeedFood({
     id: 'egg-edible',
-    name: '鸡蛋（可食部）',
+    names: { 'zh-CN': '鸡蛋（可食部）' },
     category: 'egg_dairy_soy',
     basis: 'raw',
     kcal: 143,
@@ -281,7 +282,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'egg-white',
-    name: '蛋清',
+    names: { 'zh-CN': '蛋清' },
     category: 'egg_dairy_soy',
     basis: 'raw',
     kcal: 52,
@@ -292,7 +293,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'whole-milk',
-    name: '全脂牛奶',
+    names: { 'zh-CN': '全脂牛奶' },
     category: 'egg_dairy_soy',
     basis: 'as_sold',
     kcal: 61,
@@ -303,7 +304,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'skim-milk',
-    name: '脱脂牛奶',
+    names: { 'zh-CN': '脱脂牛奶' },
     category: 'egg_dairy_soy',
     basis: 'as_sold',
     kcal: 34,
@@ -314,7 +315,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'plain-yogurt',
-    name: '无糖酸奶',
+    names: { 'zh-CN': '无糖酸奶' },
     category: 'egg_dairy_soy',
     basis: 'as_sold',
     kcal: 61,
@@ -325,7 +326,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'greek-yogurt',
-    name: '希腊酸奶（无糖）',
+    names: { 'zh-CN': '希腊酸奶（无糖）' },
     category: 'egg_dairy_soy',
     basis: 'as_sold',
     kcal: 59,
@@ -336,7 +337,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'firm-tofu',
-    name: '北豆腐',
+    names: { 'zh-CN': '北豆腐' },
     category: 'egg_dairy_soy',
     basis: 'as_sold',
     kcal: 116,
@@ -347,7 +348,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'unsweetened-soy-milk',
-    name: '无糖豆浆',
+    names: { 'zh-CN': '无糖豆浆' },
     category: 'egg_dairy_soy',
     basis: 'as_sold',
     kcal: 31,
@@ -360,7 +361,7 @@ export const SEED_FOODS: Food[] = [
   // 常见蔬菜
   makeSeedFood({
     id: 'broccoli-raw',
-    name: '西兰花（生）',
+    names: { 'zh-CN': '西兰花（生）' },
     category: 'vegetable',
     basis: 'raw',
     kcal: 34,
@@ -370,7 +371,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'lettuce-raw',
-    name: '生菜（生）',
+    names: { 'zh-CN': '生菜（生）' },
     category: 'vegetable',
     basis: 'raw',
     kcal: 15,
@@ -380,7 +381,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'tomato-raw',
-    name: '番茄（生）',
+    names: { 'zh-CN': '番茄（生）' },
     category: 'vegetable',
     basis: 'raw',
     kcal: 18,
@@ -390,7 +391,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'spinach-raw',
-    name: '菠菜（生）',
+    names: { 'zh-CN': '菠菜（生）' },
     category: 'vegetable',
     basis: 'raw',
     kcal: 23,
@@ -400,7 +401,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'cucumber-raw',
-    name: '黄瓜（生）',
+    names: { 'zh-CN': '黄瓜（生）' },
     category: 'vegetable',
     basis: 'raw',
     kcal: 15,
@@ -410,7 +411,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'bell-pepper-raw',
-    name: '彩椒（生）',
+    names: { 'zh-CN': '彩椒（生）' },
     category: 'vegetable',
     basis: 'raw',
     kcal: 31,
@@ -420,7 +421,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'carrot-raw',
-    name: '胡萝卜（生）',
+    names: { 'zh-CN': '胡萝卜（生）' },
     category: 'vegetable',
     basis: 'raw',
     kcal: 41,
@@ -430,7 +431,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'onion-raw',
-    name: '洋葱（生）',
+    names: { 'zh-CN': '洋葱（生）' },
     category: 'vegetable',
     basis: 'raw',
     kcal: 40,
@@ -440,7 +441,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'mushroom-raw',
-    name: '蘑菇（生）',
+    names: { 'zh-CN': '蘑菇（生）' },
     category: 'vegetable',
     basis: 'raw',
     kcal: 22,
@@ -450,7 +451,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'asparagus-raw',
-    name: '芦笋（生）',
+    names: { 'zh-CN': '芦笋（生）' },
     category: 'vegetable',
     basis: 'raw',
     kcal: 20,
@@ -462,7 +463,7 @@ export const SEED_FOODS: Food[] = [
   // 常见水果
   makeSeedFood({
     id: 'apple',
-    name: '苹果（可食部）',
+    names: { 'zh-CN': '苹果（可食部）' },
     category: 'fruit',
     basis: 'raw',
     kcal: 52,
@@ -473,7 +474,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'banana',
-    name: '香蕉（可食部）',
+    names: { 'zh-CN': '香蕉（可食部）' },
     category: 'fruit',
     basis: 'raw',
     kcal: 89,
@@ -484,7 +485,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'blueberry',
-    name: '蓝莓',
+    names: { 'zh-CN': '蓝莓' },
     category: 'fruit',
     basis: 'raw',
     kcal: 57,
@@ -495,7 +496,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'orange',
-    name: '橙子（可食部）',
+    names: { 'zh-CN': '橙子（可食部）' },
     category: 'fruit',
     basis: 'raw',
     kcal: 47,
@@ -506,7 +507,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'strawberry',
-    name: '草莓',
+    names: { 'zh-CN': '草莓' },
     category: 'fruit',
     basis: 'raw',
     kcal: 32,
@@ -517,7 +518,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'kiwi',
-    name: '猕猴桃（可食部）',
+    names: { 'zh-CN': '猕猴桃（可食部）' },
     category: 'fruit',
     basis: 'raw',
     kcal: 61,
@@ -528,7 +529,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'grape',
-    name: '葡萄（可食部）',
+    names: { 'zh-CN': '葡萄（可食部）' },
     category: 'fruit',
     basis: 'raw',
     kcal: 69,
@@ -539,7 +540,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'avocado',
-    name: '牛油果（可食部）',
+    names: { 'zh-CN': '牛油果（可食部）' },
     category: 'fruit',
     basis: 'raw',
     kcal: 160,
@@ -552,7 +553,7 @@ export const SEED_FOODS: Food[] = [
   // 坚果、油脂与调味品
   makeSeedFood({
     id: 'almond',
-    name: '杏仁',
+    names: { 'zh-CN': '杏仁' },
     category: 'fat_nut_condiment',
     basis: 'as_sold',
     kcal: 579,
@@ -563,7 +564,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'walnut',
-    name: '核桃',
+    names: { 'zh-CN': '核桃' },
     category: 'fat_nut_condiment',
     basis: 'as_sold',
     kcal: 654,
@@ -574,7 +575,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'cashew',
-    name: '腰果',
+    names: { 'zh-CN': '腰果' },
     category: 'fat_nut_condiment',
     basis: 'as_sold',
     kcal: 553,
@@ -585,7 +586,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'peanut',
-    name: '花生',
+    names: { 'zh-CN': '花生' },
     category: 'fat_nut_condiment',
     basis: 'as_sold',
     kcal: 567,
@@ -596,7 +597,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'olive-oil',
-    name: '橄榄油',
+    names: { 'zh-CN': '橄榄油' },
     category: 'fat_nut_condiment',
     basis: 'as_sold',
     kcal: 884,
@@ -607,7 +608,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'peanut-butter',
-    name: '花生酱',
+    names: { 'zh-CN': '花生酱' },
     category: 'fat_nut_condiment',
     basis: 'as_sold',
     kcal: 588,
@@ -618,7 +619,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'mayonnaise',
-    name: '蛋黄酱',
+    names: { 'zh-CN': '蛋黄酱' },
     category: 'fat_nut_condiment',
     basis: 'as_sold',
     kcal: 680,
@@ -629,7 +630,7 @@ export const SEED_FOODS: Food[] = [
   }),
   makeSeedFood({
     id: 'honey',
-    name: '蜂蜜',
+    names: { 'zh-CN': '蜂蜜' },
     category: 'fat_nut_condiment',
     basis: 'as_sold',
     kcal: 304,

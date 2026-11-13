@@ -6,6 +6,7 @@ import { Trash2 } from 'lucide-react';
 import type { FoodEntry, MealType } from '../../domain/types';
 import { MEAL_META } from '../../domain/constants';
 import { formatKcal } from '../../domain/formatters';
+import { getEntryDisplayName } from '../../domain/localizedText';
 import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { Button } from '../../ui/Button';
@@ -25,7 +26,7 @@ export function EntryEditorModal({
   entry,
   onClose,
 }: EntryEditorModalProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { actions, isSaving } = useApp();
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -95,7 +96,7 @@ export function EntryEditorModal({
       title={t('entry.title')}
       description={t('entry.description', {
         meal: t(MEAL_META[mealType].labelKey),
-        name: entry.foodName,
+        name: getEntryDisplayName(entry, locale),
         kcal: formatKcal(
           (entry.nutritionPer100gSnapshot.kcal * entry.amountGrams) / 100,
         ),

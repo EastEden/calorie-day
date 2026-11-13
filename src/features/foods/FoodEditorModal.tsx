@@ -19,6 +19,7 @@ import {
   FOOD_SOURCE_LABEL_KEYS,
 } from '../../domain/constants';
 import { createId } from '../../domain/id';
+import { withZhCnName } from '../../domain/localizedText';
 import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { Button } from '../../ui/Button';
@@ -79,7 +80,7 @@ export function FoodEditorModal({
       return;
     }
 
-    setName(food?.name ?? '');
+    setName(food?.names['zh-CN'] ?? '');
     setCategory(food?.category ?? 'protein');
     setBasis(food?.basis ?? 'raw');
     setKcal(food ? String(food.nutritionPer100g.kcal) : '');
@@ -159,7 +160,7 @@ export function FoodEditorModal({
     }
 
     const draft = {
-      name: name.trim(),
+      names: withZhCnName(food?.names, name),
       category,
       basis,
       nutritionPer100g: {
@@ -280,6 +281,7 @@ export function FoodEditorModal({
               autoFocus
             />
             {errors.name && <span className="field-error">{errors.name}</span>}
+            <span className="field-hint">{t('foodEditor.nameHint')}</span>
           </label>
 
           {sourceLabel && (

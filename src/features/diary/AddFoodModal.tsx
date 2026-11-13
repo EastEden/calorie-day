@@ -20,6 +20,10 @@ import {
   MEAL_META,
 } from '../../domain/constants';
 import { formatKcal } from '../../domain/formatters';
+import {
+  getFoodDisplayName,
+  getFoodSearchText,
+} from '../../domain/localizedText';
 import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { Modal } from '../../ui/Modal';
@@ -63,7 +67,9 @@ export function AddFoodModal({
         return true;
       }
       return (
-        food.name.toLocaleLowerCase(locale).includes(normalizedSearch) ||
+        getFoodSearchText(food)
+          .toLocaleLowerCase(locale)
+          .includes(normalizedSearch) ||
         t(FOOD_CATEGORY_LABEL_KEYS[food.category]).includes(normalizedSearch)
       );
     });
@@ -83,7 +89,11 @@ export function AddFoodModal({
       open={open}
       onClose={handleClose}
       size="lg"
-      title={selectedFood ? selectedFood.name : t('addFood.title')}
+      title={
+        selectedFood
+          ? getFoodDisplayName(selectedFood, locale)
+          : t('addFood.title')
+      }
       description={
         selectedFood
           ? t('addFood.selectedDescription', {
@@ -151,7 +161,7 @@ export function AddFoodModal({
                     {categoryLabel.slice(0, 1)}
                   </span>
                   <span className="food-pick-row__main">
-                    <strong>{food.name}</strong>
+                    <strong>{getFoodDisplayName(food, locale)}</strong>
                     <small>
                       {categoryLabel} ·{' '}
                       {t(FOOD_BASIS_LABEL_KEYS[food.basis])}

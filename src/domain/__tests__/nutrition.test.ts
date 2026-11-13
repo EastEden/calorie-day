@@ -14,7 +14,7 @@ function makeEntry(overrides: Partial<FoodEntry> = {}): FoodEntry {
   return {
     id: 'entry-1',
     foodId: 'food-1',
-    foodName: '测试食物',
+    foodNames: { 'zh-CN': '测试食物' },
     amountGrams: 100,
     enteredQuantity: 100,
     enteredUnit: 'g',

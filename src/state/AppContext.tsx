@@ -18,7 +18,7 @@ import {
   FOOD_CATEGORIES,
   MEAL_META,
 } from '../domain/constants';
-import { translate } from '../i18n';
+import { getCurrentLocale, translate } from '../i18n';
 import {
   getTodayIso,
   isFutureDate,
@@ -35,6 +35,7 @@ import {
   type EntryAmountInput,
 } from '../domain/logFactory';
 import { buildDaySummary } from '../domain/nutrition';
+import { getFoodDisplayName } from '../domain/localizedText';
 import {
   foodSchema,
   targetSettingsSchema,
@@ -122,7 +123,7 @@ function errorMessage(error: unknown): string {
   return translate('app.unexpectedError');
 }
 
-function sortFoods(foods: Food[]): Food[] {
+function sortFoods(foods: Food[], locale = getCurrentLocale()): Food[] {
   const categoryOrder = new Map(
     FOOD_CATEGORIES.map((category, index) => [category, index]),
   );
@@ -133,7 +134,10 @@ function sortFoods(foods: Food[]): Food[] {
     if (orderA !== orderB) {
       return orderA - orderB;
     }
-    return a.name.localeCompare(b.name, 'zh-CN');
+    return getFoodDisplayName(a, locale).localeCompare(
+      getFoodDisplayName(b, locale),
+      locale,
+    );
   });
 }
 
@@ -477,7 +481,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       const now = nowIsoTimestamp();
       const nextFood = foodSchema.parse({
         id: createId('food'),
-        name: draft.name.trim(),
+        names: draft.names,
         category: draft.category,
         basis: draft.basis,
         nutritionPer100g: { ...draft.nutritionPer100g },
@@ -494,7 +498,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       try {
         const saved = await repository.saveFood(nextFood);
         setFoods((current) => sortFoods([...current, saved]));
-        showToast(translate('toast.foodAdded', { name: saved.name }));
+        showToast(
+          translate('toast.foodAdded', {
+            name: getFoodDisplayName(saved, getCurrentLocale()),
+          }),
+        );
         return saved;
       } catch (error) {
         throw new Error(errorMessage(error));
@@ -512,7 +520,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       const nextFood = foodSchema.parse({
         ...existing,
-        name: draft.name.trim(),
+        names: draft.names,
         category: draft.category,
         basis: draft.basis,
         nutritionPer100g: { ...draft.nutritionPer100g },
@@ -529,7 +537,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setFoods((current) =>
           sortFoods(current.map((food) => (food.id === saved.id ? saved : food))),
         );
-        showToast(translate('toast.foodUpdated', { name: saved.name }));
+        showToast(
+          translate('toast.foodUpdated', {
+            name: getFoodDisplayName(saved, getCurrentLocale()),
+          }),
+        );
         return saved;
       } catch (error) {
         throw new Error(errorMessage(error));

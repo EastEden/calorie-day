@@ -12,6 +12,7 @@ import {
 } from '../../domain/formatters';
 import { formatLongDate, isToday } from '../../domain/dates';
 import { getEntryNutrition } from '../../domain/nutrition';
+import { getEntryDisplayName } from '../../domain/localizedText';
 import { useI18n } from '../../i18n';
 import { MACRO_COLORS } from '../../ui/MacroDonut';
 import { MealIcon } from '../../ui/MealIcon';
@@ -40,7 +41,7 @@ function ShareMeal({
   summary: DaySummary;
   entries: FoodEntry[];
 }) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const meta = MEAL_META[mealType];
   const mealSummary = summary.byMeal[mealType];
   const gramUnit = t('common.gram');
@@ -80,7 +81,9 @@ function ShareMeal({
           <div className="share-meal__entries">
             {entries.map((entry) => (
               <div className="share-entry" key={entry.id}>
-                <span className="share-entry__name">{entry.foodName}</span>
+                <span className="share-entry__name">
+                  {getEntryDisplayName(entry, locale)}
+                </span>
                 <span className="share-entry__amount">
                   {formatShareAmount(entry, gramUnit)}
                 </span>

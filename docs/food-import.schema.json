@@ -1,15 +1,15 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://calorie-day.local/schemas/food-import-v1.json",
-  "title": "每日热量食物库导入格式",
-  "description": "第一版食物库 JSON 导入格式。营养数据按每 100g 保存，servings 为可选常用份量。",
+  "$id": "https://calorie-day.local/schemas/food-import-v2.json",
+  "title": "每日热量食物库导入格式 v2",
+  "description": "第二版食物库 JSON 导入格式。营养数据按每 100g 保存，食物名称使用语言代码对象，且必须至少包含 zh-CN。旧版 v1 文件仍可导入，应用会自动转换为 v2。",
   "type": "object",
   "additionalProperties": false,
   "required": ["schemaVersion", "foods"],
   "properties": {
     "schemaVersion": {
-      "const": 1,
-      "description": "格式版本，当前仅支持 1"
+      "const": 2,
+      "description": "格式版本，当前导出为 2"
     },
     "exportedAt": {
       "type": "string",
@@ -53,6 +53,29 @@
         }
       }
     },
+    "names": {
+      "type": "object",
+      "description": "语言代码 -> 食物名称。zh-CN 必需，可附加其他语言版本。",
+      "required": ["zh-CN"],
+      "minProperties": 1,
+      "maxProperties": 20,
+      "propertyNames": {
+        "pattern": "^[a-z]{2,3}(?:-[A-Za-z0-9]{1,8})*$"
+      },
+      "properties": {
+        "zh-CN": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80,
+          "description": "简体中文名称，必需，作为兜底显示文本。"
+        }
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 80
+      }
+    },
     "serving": {
       "type": "object",
       "additionalProperties": false,
@@ -79,7 +102,7 @@
     "food": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["name", "category", "basis", "nutritionPer100g"],
+      "required": ["names", "category", "basis", "nutritionPer100g"],
       "properties": {
         "id": {
           "type": "string",
@@ -87,10 +110,8 @@
           "maxLength": 120,
           "description": "可选。不填时导入时自动生成；有值时可与现有食物按 ID 匹配。"
         },
-        "name": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 80
+        "names": {
+          "$ref": "#/definitions/names"
         },
         "category": {
           "type": "string",

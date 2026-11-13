@@ -47,9 +47,17 @@ export interface ServingOption {
   grams: number;
 }
 
+/**
+ * Locale-tagged text. `zh-CN` is the required fallback and is enforced by
+ * validation for food names. Additional BCP 47-like locale keys are allowed.
+ */
+export type LocalizedText = Record<string, string> & {
+  'zh-CN': string;
+};
+
 export interface Food {
   id: string;
-  name: string;
+  names: LocalizedText;
   category: FoodCategory;
   basis: FoodBasis;
   nutritionPer100g: Nutrition;
@@ -62,7 +70,11 @@ export interface Food {
 export interface FoodEntry {
   id: string;
   foodId: string;
-  foodName: string;
+  /**
+   * Snapshot of the food's localized names at the time it was logged.
+   * This keeps historical entries stable when the food library changes.
+   */
+  foodNames: LocalizedText;
   amountGrams: number;
   enteredQuantity: number;
   enteredUnit: EntryUnit;
@@ -103,7 +115,7 @@ export type ProfileInput = Omit<UserProfile, 'updatedAt'>;
 export type TargetSettingsInput = Pick<TargetSettings, 'mode' | 'manual'>;
 
 export interface FoodDraft {
-  name: string;
+  names: LocalizedText;
   category: FoodCategory;
   basis: FoodBasis;
   nutritionPer100g: Nutrition;
@@ -154,7 +166,7 @@ export interface StorageInfo {
 
 export interface ImportedFoodInput {
   id?: string;
-  name: string;
+  names: LocalizedText;
   category: FoodCategory;
   basis: FoodBasis;
   nutritionPer100g: Nutrition;

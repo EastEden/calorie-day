@@ -20,6 +20,10 @@ import {
 } from '../../domain/constants';
 import { formatDecimal, formatKcal } from '../../domain/formatters';
 import { getTodayIso } from '../../domain/dates';
+import {
+  getFoodDisplayName,
+  getFoodSearchText,
+} from '../../domain/localizedText';
 import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { useToast } from '../../ui/ToastProvider';
@@ -51,7 +55,9 @@ export function FoodsPage() {
         return true;
       }
       return (
-        food.name.toLocaleLowerCase(locale).includes(normalizedSearch) ||
+        getFoodSearchText(food)
+          .toLocaleLowerCase(locale)
+          .includes(normalizedSearch) ||
         t(FOOD_CATEGORY_LABEL_KEYS[food.category]).includes(normalizedSearch)
       );
     });
@@ -188,7 +194,7 @@ export function FoodsPage() {
                   {t(FOOD_SOURCE_LABEL_KEYS[food.source])}
                 </span>
               </div>
-              <h3>{food.name}</h3>
+              <h3>{getFoodDisplayName(food, locale)}</h3>
               <div className="food-card__energy">
                 <strong>{formatKcal(food.nutritionPer100g.kcal)}</strong>
                 <span>

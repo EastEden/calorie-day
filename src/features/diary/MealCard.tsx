@@ -6,6 +6,7 @@ import {
   formatEntryAmount,
   formatKcal,
 } from '../../domain/formatters';
+import { getEntryDisplayName } from '../../domain/localizedText';
 import { useI18n } from '../../i18n';
 import { MealIcon } from '../../ui/MealIcon';
 
@@ -26,7 +27,7 @@ export function MealCard({
   onAdd,
   onEdit,
 }: MealCardProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const meta = MEAL_META[mealType];
   const mealLabel = t(meta.labelKey);
   const hasEntries = entries.length > 0;
@@ -90,10 +91,14 @@ export function MealCard({
               key={entry.id}
               onClick={() => onEdit(entry)}
               disabled={disabled}
-              aria-label={t('meals.editAria', { name: entry.foodName })}
+              aria-label={t('meals.editAria', {
+                name: getEntryDisplayName(entry, locale),
+              })}
             >
               <span className="entry-row__main">
-                <span className="entry-row__name">{entry.foodName}</span>
+                <span className="entry-row__name">
+                  {getEntryDisplayName(entry, locale)}
+                </span>
                 <span className="entry-row__amount">
                   {formatEntryAmount(entry)}
                 </span>

@@ -246,6 +246,8 @@ export const zhCN = {
   'foodEditor.descriptionAdd':
     '营养数据按每 100g 填写，保存后可在记录食物时直接使用。',
   'foodEditor.name': '食物名称',
+  'foodEditor.nameHint':
+    '当前版本编辑简体中文（zh-CN）名称；导入的其他语言名称会保留。',
   'foodEditor.namePlaceholder': '例如：自制鸡胸肉丸',
   'foodEditor.category': '分类',
   'foodEditor.basis': '营养基准',
@@ -311,7 +313,7 @@ export const zhCN = {
   'import.ready':
     '校验通过，可以导入。导入过程会一次性写入，失败不会留下半份数据。',
   'import.schemaNote':
-    'JSON 格式版本为 1，包含名称、分类、基准状态和每 100g 营养数据。完整字段可在下载的模板中查看。',
+    'JSON 格式版本为 2，食物名称使用语言代码对象并至少包含 zh-CN；可附加其他语言。旧版 v1 文件仍可导入，导出统一为 v2。完整字段可在下载的模板中查看。',
 
   // Settings page
   'settings.eyebrow': '让目标更像你',

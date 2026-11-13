@@ -20,6 +20,10 @@ import {
   materializeImportedFoods,
   type FoodImportPlan,
 } from './foodTransfer';
+import {
+  getFoodDisplayName,
+  resolveLocalizedText,
+} from '../../domain/localizedText';
 import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { useToast } from '../../ui/ToastProvider';
@@ -36,7 +40,7 @@ export function ImportFoodsModal({
   open,
   onClose,
 }: ImportFoodsModalProps) {
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const { foods, actions } = useApp();
   const { showToast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -90,7 +94,7 @@ export function ImportFoodsModal({
       return;
     }
 
-    const nextPlan = buildFoodImportPlan(foods, parsed.data);
+    const nextPlan = buildFoodImportPlan(foods, parsed.data, locale);
     setPayload(parsed.data);
     setPlan(nextPlan);
     if (nextPlan.conflicts.length === 0) {
@@ -292,14 +296,22 @@ export function ImportFoodsModal({
                   {plan.conflicts.slice(0, 6).map((conflict) => (
                     <div
                       className="conflict-list__row"
-                      key={`${conflict.incoming.name}-${conflict.existing.id}`}
+                      key={`${resolveLocalizedText(
+                        conflict.incoming.names,
+                        locale,
+                      )}-${conflict.existing.id}`}
                     >
-                      <span>{conflict.incoming.name}</span>
+                      <span>
+                        {resolveLocalizedText(
+                          conflict.incoming.names,
+                          locale,
+                        )}
+                      </span>
                       <small>
                         {conflict.matchedBy === 'id'
                           ? t('import.matchId')
                           : t('import.matchName')}{' '}
-                        · {conflict.existing.name}
+                        · {getFoodDisplayName(conflict.existing, locale)}
                       </small>
                     </div>
                   ))}
