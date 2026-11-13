@@ -14,10 +14,11 @@ import type {
   TargetSettings,
   UserProfile,
 } from '../domain/types';
+import { upgradeDatabaseV1ToV2 } from './migrations';
 import { SEED_FOODS, SEED_VERSION } from './seedFoods';
 
 const DEFAULT_DB_NAME = 'calorie-day';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 const STORES = {
   meta: 'meta',
@@ -30,7 +31,7 @@ const STORES = {
 type StoreName = (typeof STORES)[keyof typeof STORES];
 
 interface AppMeta {
-  schemaVersion: 1;
+  schemaVersion: 2;
   seedVersion: 1;
   createdAt: string;
 }
@@ -110,8 +111,9 @@ function openDatabase(dbName: string): Promise<IDBDatabase> {
     let blocked = false;
     const request = indexedDB.open(dbName, DB_VERSION);
 
-    request.onupgradeneeded = () => {
+    request.onupgradeneeded = (event) => {
       const db = request.result;
+      const oldVersion = event.oldVersion;
 
       if (!db.objectStoreNames.contains(STORES.meta)) {
         db.createObjectStore(STORES.meta);
@@ -125,11 +127,16 @@ function openDatabase(dbName: string): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STORES.foods)) {
         const foods = db.createObjectStore(STORES.foods, { keyPath: 'id' });
         foods.createIndex('by_category', 'category', { unique: false });
-        foods.createIndex('by_name', 'name', { unique: false });
       }
       if (!db.objectStoreNames.contains(STORES.logs)) {
         const logs = db.createObjectStore(STORES.logs, { keyPath: 'date' });
         logs.createIndex('by_updated_at', 'updatedAt', { unique: false });
+      }
+
+      // Existing v1 databases use `name`/`foodName` strings. The versionchange
+      // transaction migrates all records before the open request succeeds.
+      if (oldVersion > 0 && oldVersion < 2 && request.transaction) {
+        upgradeDatabaseV1ToV2(request.transaction);
       }
     };
 
@@ -164,7 +171,7 @@ function openDatabase(dbName: string): Promise<IDBDatabase> {
 }
 
 function parseStored<T>(
-  schema: z.ZodType<T>,
+  schema: z.ZodType<T, z.ZodTypeDef, unknown>,
   raw: unknown,
   label: string,
 ): T {
@@ -284,7 +291,7 @@ export class IndexedDbRepository implements CalorieRepository {
     const foodCount = await this.countFoods(db);
     const now = nowIsoTimestamp();
     const meta: AppMeta = {
-      schemaVersion: 1,
+      schemaVersion: 2,
       seedVersion: SEED_VERSION,
       createdAt: now,
     };
@@ -404,7 +411,7 @@ export class IndexedDbRepository implements CalorieRepository {
     const db = await this.getDb();
     const raw = await this.readAll<unknown>(db, STORES.foods);
     return raw.map((item, index) =>
-      parseStored(foodSchema, item, `食物库第 ${index + 1} 条`),
+      parseStored<Food>(foodSchema, item, `食物库第 ${index + 1} 条`),
     );
   }
 
@@ -450,7 +457,7 @@ export class IndexedDbRepository implements CalorieRepository {
     if (raw === undefined) {
       return null;
     }
-    return parseStored(dailyLogSchema, raw, '每日记录');
+    return parseStored<DailyLog>(dailyLogSchema, raw, '每日记录');
   }
 
   /**
@@ -487,7 +494,7 @@ export class IndexedDbRepository implements CalorieRepository {
           let existing: DailyLog | null = null;
 
           if (rawExisting !== undefined) {
-            existing = parseStored(
+            existing = parseStored<DailyLog>(
               dailyLogSchema,
               rawExisting,
               '已保存的每日记录',

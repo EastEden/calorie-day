@@ -5,16 +5,18 @@ import { SEED_FOODS } from '../../../data/seedFoods';
 import {
   buildFoodExportPayload,
   buildFoodImportPlan,
+  buildFoodImportTemplate,
   materializeImportedFoods,
 } from '../foodTransfer';
 
 const existing = SEED_FOODS[0]!;
+const existingZhName = existing.names['zh-CN'];
 
 function makePayload(names: string[]) {
   return foodImportSchema.parse({
-    schemaVersion: 1,
+    schemaVersion: 2,
     foods: names.map((name) => ({
-      name,
+      names: { 'zh-CN': name },
       category: 'protein',
       basis: 'raw',
       nutritionPer100g: {
@@ -31,7 +33,7 @@ describe('foodTransfer', () => {
   it('separates new foods from conflicts', () => {
     const plan = buildFoodImportPlan(
       [existing],
-      makePayload([existing.name, '全新的食物']),
+      makePayload([existingZhName, '全新的食物']),
     );
 
     expect(plan.newItems).toHaveLength(1);
@@ -41,7 +43,10 @@ describe('foodTransfer', () => {
   });
 
   it('skips conflicts unless overwrite is enabled', () => {
-    const plan = buildFoodImportPlan([existing], makePayload([existing.name]));
+    const plan = buildFoodImportPlan(
+      [existing],
+      makePayload([existingZhName]),
+    );
     expect(materializeImportedFoods(plan, false)).toHaveLength(0);
     const overwritten = materializeImportedFoods(plan, true);
     expect(overwritten).toHaveLength(1);
@@ -52,10 +57,13 @@ describe('foodTransfer', () => {
 
   it('assembles new foods with generated ids and serving ids', () => {
     const payload = foodImportSchema.parse({
-      schemaVersion: 1,
+      schemaVersion: 2,
       foods: [
         {
-          name: '自制能量棒',
+          names: {
+            'zh-CN': '自制能量棒',
+            'en-US': 'Homemade energy bar',
+          },
           category: 'other',
           basis: 'as_sold',
           nutritionPer100g: {
@@ -75,17 +83,37 @@ describe('foodTransfer', () => {
     expect(foods[0]?.id).toMatch(/^food_/);
     expect(foods[0]?.servings[0]?.id).toMatch(/^serving_/);
     expect(foods[0]?.source).toBe('imported');
+    expect(foods[0]?.names['en-US']).toBe('Homemade energy bar');
   });
 
   it('exports a payload that can be re-imported', () => {
     const food: Food = {
       ...existing,
+      names: {
+        ...existing.names,
+        'en-US': 'Exported chicken breast',
+      },
       servings: [
         { id: 'serving-test', label: '份', grams: 100 },
       ],
     };
     const exportPayload = buildFoodExportPayload([food]);
+    expect(exportPayload.schemaVersion).toBe(2);
+    expect(exportPayload.foods[0]?.names['en-US']).toBe(
+      'Exported chicken breast',
+    );
     const parsed = foodImportSchema.safeParse(exportPayload);
     expect(parsed.success).toBe(true);
+  });
+
+  it('builds a v2 template with a required zh-CN name', () => {
+    const template = JSON.parse(buildFoodImportTemplate()) as {
+      schemaVersion: number;
+      foods: { names: Record<string, string> }[];
+    };
+
+    expect(template.schemaVersion).toBe(2);
+    expect(template.foods[0]?.names['zh-CN']).toBe('示例：自制鸡胸肉丸');
+    expect(foodImportSchema.safeParse(template).success).toBe(true);
   });
 });

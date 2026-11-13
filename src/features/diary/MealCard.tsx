@@ -6,6 +6,8 @@ import {
   formatEntryAmount,
   formatKcal,
 } from '../../domain/formatters';
+import { getEntryDisplayName } from '../../domain/localizedText';
+import { useI18n } from '../../i18n';
 import { MealIcon } from '../../ui/MealIcon';
 
 interface MealCardProps {
@@ -25,7 +27,9 @@ export function MealCard({
   onAdd,
   onEdit,
 }: MealCardProps) {
+  const { t, locale } = useI18n();
   const meta = MEAL_META[mealType];
+  const mealLabel = t(meta.labelKey);
   const hasEntries = entries.length > 0;
 
   return (
@@ -36,13 +40,13 @@ export function MealCard({
         </div>
 
         <div className="meal-card__title">
-          <h3>{meta.label}</h3>
-          <p>{meta.subtitle}</p>
+          <h3>{mealLabel}</h3>
+          <p>{t(meta.subtitleKey)}</p>
         </div>
 
         <div className="meal-card__kcal">
           <strong>{formatKcal(summary.totals.kcal)}</strong>
-          <span>kcal</span>
+          <span>{t('common.kcal')}</span>
         </div>
 
         <button
@@ -50,18 +54,31 @@ export function MealCard({
           className="meal-card__add"
           onClick={onAdd}
           disabled={disabled}
-          aria-label={`添加${meta.label}`}
+          aria-label={t('meals.addAria', { meal: mealLabel })}
         >
           <Plus size={15} aria-hidden="true" />
-          添加
+          {t('common.add')}
         </button>
       </header>
 
       {hasEntries && (
-        <div className="meal-card__macros" aria-label={`${meta.label}营养小计`}>
-          <span>碳水 {formatDecimal(summary.totals.carbsG)}g</span>
-          <span>蛋白 {formatDecimal(summary.totals.proteinG)}g</span>
-          <span>脂肪 {formatDecimal(summary.totals.fatG)}g</span>
+        <div
+          className="meal-card__macros"
+          aria-label={t('meals.subtotalAria', { meal: mealLabel })}
+        >
+          <span>
+            {t('common.carbs')} {formatDecimal(summary.totals.carbsG)}
+            {t('common.gram')}
+          </span>
+          <span>
+            {t('common.proteinShort')}{' '}
+            {formatDecimal(summary.totals.proteinG)}
+            {t('common.gram')}
+          </span>
+          <span>
+            {t('common.fat')} {formatDecimal(summary.totals.fatG)}
+            {t('common.gram')}
+          </span>
         </div>
       )}
 
@@ -74,17 +91,24 @@ export function MealCard({
               key={entry.id}
               onClick={() => onEdit(entry)}
               disabled={disabled}
-              aria-label={`编辑 ${entry.foodName}`}
+              aria-label={t('meals.editAria', {
+                name: getEntryDisplayName(entry, locale),
+              })}
             >
               <span className="entry-row__main">
-                <span className="entry-row__name">{entry.foodName}</span>
+                <span className="entry-row__name">
+                  {getEntryDisplayName(entry, locale)}
+                </span>
                 <span className="entry-row__amount">
                   {formatEntryAmount(entry)}
                 </span>
               </span>
               <span className="entry-row__energy">
-                {formatKcal((entry.nutritionPer100gSnapshot.kcal * entry.amountGrams) / 100)}
-                <small>kcal</small>
+                {formatKcal(
+                  (entry.nutritionPer100gSnapshot.kcal * entry.amountGrams) /
+                    100,
+                )}
+                <small>{t('common.kcal')}</small>
               </span>
               <ChevronRight
                 size={16}
@@ -104,8 +128,8 @@ export function MealCard({
               <Plus size={17} aria-hidden="true" />
             </span>
             <span>
-              <strong>{meta.emptyHint}</strong>
-              <small>点击添加第一项食物</small>
+              <strong>{t(meta.emptyHintKey)}</strong>
+              <small>{t('meals.emptyHint')}</small>
             </span>
           </button>
         )}

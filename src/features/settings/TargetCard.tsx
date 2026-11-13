@@ -14,6 +14,7 @@ import {
 } from '../../domain/formatters';
 import { calculateTargets } from '../../domain/targets';
 import type { Nutrition } from '../../domain/types';
+import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { Button } from '../../ui/Button';
 
@@ -38,6 +39,7 @@ function parseNumber(value: string): number {
 }
 
 export function TargetCard() {
+  const { t } = useI18n();
   const { profile, targets, targetSettings, actions } = useApp();
   const [mode, setMode] = useState(targetSettings.mode);
   const [form, setForm] = useState<TargetFormState>(
@@ -93,7 +95,7 @@ export function TargetCard() {
         !Number.isFinite(manual.fatG) ||
         manual.fatG < 0
       ) {
-        setError('请填写有效的目标热量和三大营养素。');
+        setError(t('target.invalid'));
         return;
       }
 
@@ -103,7 +105,7 @@ export function TargetCard() {
         manual,
       });
       if (!ok) {
-        setError('保存失败，请重试。');
+        setError(t('target.saveFailed'));
       }
       setSaving(false);
       return;
@@ -115,7 +117,7 @@ export function TargetCard() {
       manual: targetSettings.manual,
     });
     if (!ok) {
-      setError('保存失败，请重试。');
+      setError(t('target.saveFailed'));
     }
     setSaving(false);
   };
@@ -131,31 +133,39 @@ export function TargetCard() {
     <section className="settings-card" aria-labelledby="target-settings-title">
       <header className="settings-card__header">
         <div>
-          <p className="eyebrow">每日目标</p>
-          <h2 id="target-settings-title">推荐摄入</h2>
-          <p>可以跟随身体资料自动计算，也可以完全手动设定。</p>
+          <p className="eyebrow">{t('target.eyebrow')}</p>
+          <h2 id="target-settings-title">{t('target.title')}</h2>
+          <p>{t('target.description')}</p>
         </div>
         <span className={`mode-badge mode-badge--${mode}`}>
-          {mode === 'auto' ? '自动' : '手动'}
+          {mode === 'auto'
+            ? t('target.autoBadge')
+            : t('target.manualBadge')}
         </span>
       </header>
 
-      <div className="segmented segmented--wide" role="group" aria-label="目标模式">
+      <div
+        className="segmented segmented--wide"
+        role="group"
+        aria-label={t('target.modeAria')}
+      >
         <button
           type="button"
           className={`segmented__option ${mode === 'auto' ? 'is-active' : ''}`}
           aria-pressed={mode === 'auto'}
           onClick={() => chooseMode('auto')}
         >
-          自动推荐
+          {t('target.modeAuto')}
         </button>
         <button
           type="button"
-          className={`segmented__option ${mode === 'manual' ? 'is-active' : ''}`}
+          className={`segmented__option ${
+            mode === 'manual' ? 'is-active' : ''
+          }`}
           aria-pressed={mode === 'manual'}
           onClick={() => chooseMode('manual')}
         >
-          手动设置
+          {t('target.modeManual')}
         </button>
       </div>
 
@@ -163,21 +173,38 @@ export function TargetCard() {
         <div className="target-auto">
           <div className="target-hero">
             <div>
-              <span>每日热量</span>
+              <span>{t('target.dailyCalories')}</span>
               <strong>
-                {targets ? formatKcal(targets.kcal) : '—'}
-                <small> kcal</small>
+                {targets
+                  ? formatKcal(targets.kcal)
+                  : t('common.notAvailable')}
+                <small> {t('common.kcal')}</small>
               </strong>
             </div>
             <div className="target-hero__macros">
               <span>
-                碳水 <strong>{targets ? formatDecimal(targets.carbsG) : '—'}g</strong>
+                {t('common.carbs')}{' '}
+                <strong>
+                  {targets
+                    ? `${formatDecimal(targets.carbsG)}${t('common.gram')}`
+                    : t('common.notAvailable')}
+                </strong>
               </span>
               <span>
-                蛋白 <strong>{targets ? formatDecimal(targets.proteinG) : '—'}g</strong>
+                {t('common.proteinShort')}{' '}
+                <strong>
+                  {targets
+                    ? `${formatDecimal(targets.proteinG)}${t('common.gram')}`
+                    : t('common.notAvailable')}
+                </strong>
               </span>
               <span>
-                脂肪 <strong>{targets ? formatDecimal(targets.fatG) : '—'}g</strong>
+                {t('common.fat')}{' '}
+                <strong>
+                  {targets
+                    ? `${formatDecimal(targets.fatG)}${t('common.gram')}`
+                    : t('common.notAvailable')}
+                </strong>
               </span>
             </div>
           </div>
@@ -185,32 +212,37 @@ export function TargetCard() {
           {calculated && (
             <div className="target-breakdown">
               <div>
-                <span>基础代谢 BMR</span>
-                <strong>{formatKcal(calculated.bmr)} kcal</strong>
-              </div>
-              <div>
-                <span>日常消耗 TDEE</span>
-                <strong>{formatKcal(calculated.tdee)} kcal</strong>
-              </div>
-              <div>
-                <span>活动与目标</span>
+                <span>{t('target.bmr')}</span>
                 <strong>
-                  {activity?.label ?? '—'} · {goal?.label ?? '—'}
+                  {formatKcal(calculated.bmr)} {t('common.kcal')}
+                </strong>
+              </div>
+              <div>
+                <span>{t('target.tdee')}</span>
+                <strong>
+                  {formatKcal(calculated.tdee)} {t('common.kcal')}
+                </strong>
+              </div>
+              <div>
+                <span>{t('target.activityAndGoal')}</span>
+                <strong>
+                  {activity ? t(activity.labelKey) : t('common.notAvailable')}{' '}
+                  · {goal ? t(goal.labelKey) : t('common.notAvailable')}
                 </strong>
               </div>
             </div>
           )}
 
           <p className="field-hint">
-            热量目标 = TDEE × 目标系数；蛋白质按活动量 1.0–1.8g/kg（当前{' '}
-            {formatDecimal(activity?.proteinFactor ?? 1.2)}g/kg），脂肪占 25%
-            热量，碳水补足剩余。
+            {t('target.formula', {
+              factor: formatDecimal(activity?.proteinFactor ?? 1.2),
+            })}
           </p>
         </div>
       ) : (
         <div className="manual-target-form">
           <label className="field">
-            <span className="field-label">每日热量</span>
+            <span className="field-label">{t('target.caloriesField')}</span>
             <span className="input-with-suffix">
               <input
                 type="number"
@@ -222,13 +254,13 @@ export function TargetCard() {
                   setForm((current) => ({ ...current, kcal: event.target.value }))
                 }
               />
-              <span>kcal</span>
+              <span>{t('common.kcal')}</span>
             </span>
           </label>
 
           <div className="field-row field-row--three">
             <label className="field">
-              <span className="field-label">碳水</span>
+              <span className="field-label">{t('target.carbs')}</span>
               <span className="input-with-suffix">
                 <input
                   type="number"
@@ -243,11 +275,11 @@ export function TargetCard() {
                     }))
                   }
                 />
-                <span>g</span>
+                <span>{t('common.gram')}</span>
               </span>
             </label>
             <label className="field">
-              <span className="field-label">蛋白质</span>
+              <span className="field-label">{t('target.protein')}</span>
               <span className="input-with-suffix">
                 <input
                   type="number"
@@ -262,11 +294,11 @@ export function TargetCard() {
                     }))
                   }
                 />
-                <span>g</span>
+                <span>{t('common.gram')}</span>
               </span>
             </label>
             <label className="field">
-              <span className="field-label">脂肪</span>
+              <span className="field-label">{t('target.fat')}</span>
               <span className="input-with-suffix">
                 <input
                   type="number"
@@ -281,14 +313,12 @@ export function TargetCard() {
                     }))
                   }
                 />
-                <span>g</span>
+                <span>{t('common.gram')}</span>
               </span>
             </label>
           </div>
 
-          <p className="field-hint">
-            手动目标会覆盖自动推荐。需要重新计算时，切回“自动推荐”即可。
-          </p>
+          <p className="field-hint">{t('target.manualHint')}</p>
         </div>
       )}
 
@@ -301,8 +331,8 @@ export function TargetCard() {
       <div className="settings-card__actions">
         <p className="field-hint">
           {mode === 'auto'
-            ? '自动目标会随个人资料更新。'
-            : '手动目标会保持不变，直到你再次修改。'}
+            ? t('target.autoHint')
+            : t('target.manualNote')}
         </p>
         <Button
           variant={mode === 'auto' ? 'secondary' : 'primary'}
@@ -317,7 +347,9 @@ export function TargetCard() {
           disabled={mode === 'auto' && targetSettings.mode === 'auto'}
           onClick={() => void handleSave()}
         >
-          {mode === 'auto' ? '恢复自动推荐' : '保存手动目标'}
+          {mode === 'auto'
+            ? t('target.restoreAuto')
+            : t('target.saveManual')}
         </Button>
       </div>
     </section>

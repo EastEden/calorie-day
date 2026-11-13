@@ -1,9 +1,6 @@
 import { Info } from 'lucide-react';
 import { isLocalTestToolsEnabled } from '../../app/environment';
-import {
-  DATA_REFERENCE_NOTE,
-  NUTRITION_REFERENCE_NOTE,
-} from '../../domain/constants';
+import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { LocalToolsCard } from './LocalToolsCard';
 import { ProfileForm } from './ProfileForm';
@@ -11,6 +8,7 @@ import { StorageCard } from './StorageCard';
 import { TargetCard } from './TargetCard';
 
 export function SettingsPage() {
+  const { t } = useI18n();
   const { foods, targetSettings } = useApp();
   const showLocalTools = isLocalTestToolsEnabled();
 
@@ -18,14 +16,14 @@ export function SettingsPage() {
     <div className="settings-page page-width">
       <header className="page-header">
         <div>
-          <p className="eyebrow">让目标更像你</p>
-          <h1>设置</h1>
-          <p>
-            调整身体资料与推荐目标。所有计算都是估算值，你可以随时手动覆盖。
-          </p>
+          <p className="eyebrow">{t('settings.eyebrow')}</p>
+          <h1>{t('settings.title')}</h1>
+          <p>{t('settings.description')}</p>
         </div>
         <span className="page-header__badge">
-          {targetSettings.mode === 'manual' ? '手动目标' : '自动推荐'}
+          {targetSettings.mode === 'manual'
+            ? t('target.mode.manual')
+            : t('target.mode.auto')}
         </span>
       </header>
 
@@ -45,8 +43,8 @@ export function SettingsPage() {
         <section className="settings-card settings-card--info">
           <header className="settings-card__header">
             <div>
-              <p className="eyebrow">信息</p>
-              <h2>计算说明</h2>
+              <p className="eyebrow">{t('settings.info.eyebrow')}</p>
+              <h2>{t('settings.info.title')}</h2>
             </div>
             <span className="storage-icon" aria-hidden="true">
               <Info size={21} />
@@ -54,16 +52,16 @@ export function SettingsPage() {
           </header>
           <div className="info-rows">
             <div>
-              <span>热量推荐</span>
-              <p>{NUTRITION_REFERENCE_NOTE}</p>
+              <span>{t('settings.info.calories')}</span>
+              <p>{t('notes.nutritionReference')}</p>
             </div>
             <div>
-              <span>食物营养</span>
-              <p>{DATA_REFERENCE_NOTE}</p>
+              <span>{t('settings.info.food')}</span>
+              <p>{t('notes.dataReference')}</p>
             </div>
             <div>
-              <span>当前食物库</span>
-              <p>{foods.length} 项食物，按每 100g 保存营养参考值。</p>
+              <span>{t('settings.info.library')}</span>
+              <p>{t('settings.info.libraryCount', { n: foods.length })}</p>
             </div>
           </div>
         </section>

@@ -36,6 +36,85 @@ function makeLog(date = '2026-11-13'): DailyLog {
   return createEmptyDailyLog(date);
 }
 
+function createLegacyV1Database(name: string): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(name, 1);
+
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      const transaction = request.transaction!;
+
+      db.createObjectStore('meta');
+      db.createObjectStore('profile');
+      db.createObjectStore('settings');
+      const foods = db.createObjectStore('foods', { keyPath: 'id' });
+      foods.createIndex('by_category', 'category', { unique: false });
+      foods.createIndex('by_name', 'name', { unique: false });
+      const logs = db.createObjectStore('logs', { keyPath: 'date' });
+      logs.createIndex('by_updated_at', 'updatedAt', { unique: false });
+
+      const food = {
+        id: 'legacy-food',
+        name: '旧版鸡胸肉',
+        category: 'protein',
+        basis: 'raw',
+        nutritionPer100g: {
+          kcal: 120,
+          proteinG: 22.5,
+          carbsG: 0,
+          fatG: 2.6,
+        },
+        servings: [],
+        source: 'custom',
+        createdAt: '2026-01-01T00:00:00.000Z',
+        updatedAt: '2026-01-01T00:00:00.000Z',
+      };
+      const log = {
+        id: 'legacy-log',
+        date: '2026-11-13',
+        meals: {
+          breakfast: [
+            {
+              id: 'legacy-entry',
+              foodId: food.id,
+              foodName: food.name,
+              amountGrams: 100,
+              enteredQuantity: 100,
+              enteredUnit: 'g',
+              nutritionPer100gSnapshot: food.nutritionPer100g,
+              createdAt: food.createdAt,
+              updatedAt: food.updatedAt,
+            },
+          ],
+          lunch: [],
+          dinner: [],
+          snack: [],
+        },
+        revision: 1,
+        createdAt: food.createdAt,
+        updatedAt: food.updatedAt,
+      };
+
+      transaction.objectStore('foods').put(food);
+      transaction.objectStore('logs').put(log);
+      transaction.objectStore('meta').put(
+        {
+          schemaVersion: 1,
+          seedVersion: 1,
+          createdAt: '2026-01-01T00:00:00.000Z',
+        },
+        'app',
+      );
+    };
+
+    request.onsuccess = () => {
+      request.result.close();
+      resolve();
+    };
+    request.onerror = () => reject(request.error);
+  });
+}
+
 afterEach(async () => {
   if (repository) {
     await repository.close();
@@ -100,7 +179,9 @@ describe('IndexedDbRepository', () => {
     const loaded = await reopened.getDailyLog('2026-11-13');
 
     expect(loaded?.meals.breakfast).toHaveLength(1);
-    expect(loaded?.meals.breakfast[0]?.foodName).toBe(food!.name);
+    expect(loaded?.meals.breakfast[0]?.foodNames['zh-CN']).toBe(
+      food!.names['zh-CN'],
+    );
     expect(loaded?.meals.breakfast[0]?.amountGrams).toBe(150);
     expect(loaded?.revision).toBe(1);
   });
@@ -196,6 +277,43 @@ describe('IndexedDbRepository', () => {
     expect((await repo.getDailyLog('2026-11-13'))).toBeNull();
     expect((await repo.getTargetSettings()).mode).toBe('auto');
     expect((await repo.listFoods()).length).toBeGreaterThan(50);
+  });
+
+  it('migrates v1 food names and entry snapshots to localized maps', async () => {
+    dbName = `calorie-test-migration-${Date.now()}-${Math.random()}`;
+    await createLegacyV1Database(dbName);
+    const repo = createRepository();
+    await repo.initialize();
+
+    const foods = await repo.listFoods();
+    expect(foods).toHaveLength(1);
+    expect(foods[0]?.names).toEqual({ 'zh-CN': '旧版鸡胸肉' });
+    expect('name' in (foods[0] ?? {})).toBe(false);
+
+    const log = await repo.getDailyLog('2026-11-13');
+    expect(log?.meals.breakfast[0]?.foodNames).toEqual({
+      'zh-CN': '旧版鸡胸肉',
+    });
+    expect(
+      'foodName' in (log?.meals.breakfast[0] ?? {}),
+    ).toBe(false);
+
+    const rawDb = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(dbName);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    expect(rawDb.version).toBe(2);
+    const meta = await new Promise<{ schemaVersion?: number } | undefined>(
+      (resolve, reject) => {
+        const transaction = rawDb.transaction('meta', 'readonly');
+        const request = transaction.objectStore('meta').get('app');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      },
+    );
+    expect(meta?.schemaVersion).toBe(2);
+    rawDb.close();
   });
 
   it('reports corrupted stored data instead of silently overwriting it', async () => {

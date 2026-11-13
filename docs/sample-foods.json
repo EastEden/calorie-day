@@ -1,8 +1,11 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "foods": [
     {
-      "name": "示例：自制鸡胸肉丸",
+      "names": {
+        "zh-CN": "示例：自制鸡胸肉丸",
+        "en-US": "Example: homemade chicken meatballs"
+      },
       "category": "protein",
       "basis": "raw",
       "nutritionPer100g": {
@@ -19,7 +22,9 @@
       ]
     },
     {
-      "name": "示例：无糖燕麦拿铁",
+      "names": {
+        "zh-CN": "示例：无糖燕麦拿铁"
+      },
       "category": "other",
       "basis": "as_sold",
       "nutritionPer100g": {

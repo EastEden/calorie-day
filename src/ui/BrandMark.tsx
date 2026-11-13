@@ -1,11 +1,15 @@
+import { useI18n } from '../i18n';
+
 export function BrandMark({ size = 38 }: { size?: number }) {
+  const { t } = useI18n();
+
   return (
     <svg
       width={size}
       height={size}
       viewBox="0 0 64 64"
       role="img"
-      aria-label="每日热量"
+      aria-label={t('app.name')}
     >
       <rect width="64" height="64" rx="18" fill="#2f5d45" />
       <path

@@ -1,4 +1,5 @@
-import { APP_TABS, type AppTab } from '../app/navigation';
+import { useI18n } from '../i18n';
+import { APP_TABS, type AppTab } from './navigation';
 
 interface BottomNavProps {
   activeTab: AppTab;
@@ -6,8 +7,10 @@ interface BottomNavProps {
 }
 
 export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
+  const { t } = useI18n();
+
   return (
-    <nav className="bottomnav" aria-label="移动端主导航">
+    <nav className="bottomnav" aria-label={t('nav.mobileAria')}>
       {APP_TABS.map((item) => {
         const Icon = item.icon;
         return (
@@ -23,7 +26,7 @@ export function BottomNav({ activeTab, onTabChange }: BottomNavProps) {
             <span className="bottomnav__icon">
               <Icon size={20} strokeWidth={1.9} aria-hidden="true" />
             </span>
-            <span>{item.label}</span>
+            <span>{t(item.labelKey)}</span>
           </button>
         );
       })}

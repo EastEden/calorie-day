@@ -13,14 +13,18 @@ import type {
   FoodCategory,
 } from '../../domain/types';
 import {
-  DATA_REFERENCE_NOTE,
+  FOOD_BASIS_LABEL_KEYS,
   FOOD_CATEGORIES,
-  FOOD_CATEGORY_LABELS,
-  FOOD_BASIS_LABELS,
-  FOOD_SOURCE_LABELS,
+  FOOD_CATEGORY_LABEL_KEYS,
+  FOOD_SOURCE_LABEL_KEYS,
 } from '../../domain/constants';
 import { formatDecimal, formatKcal } from '../../domain/formatters';
 import { getTodayIso } from '../../domain/dates';
+import {
+  getFoodDisplayName,
+  getFoodSearchText,
+} from '../../domain/localizedText';
+import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { useToast } from '../../ui/ToastProvider';
 import { Button } from '../../ui/Button';
@@ -32,6 +36,7 @@ import { ImportFoodsModal } from './ImportFoodsModal';
 type CategoryFilter = FoodCategory | 'all';
 
 export function FoodsPage() {
+  const { t, locale } = useI18n();
   const { foods } = useApp();
   const { showToast } = useToast();
   const [search, setSearch] = useState('');
@@ -41,7 +46,7 @@ export function FoodsPage() {
   const [importOpen, setImportOpen] = useState(false);
 
   const filteredFoods = useMemo(() => {
-    const normalizedSearch = search.trim().toLocaleLowerCase('zh-CN');
+    const normalizedSearch = search.trim().toLocaleLowerCase(locale);
     return foods.filter((food) => {
       if (category !== 'all' && food.category !== category) {
         return false;
@@ -50,11 +55,13 @@ export function FoodsPage() {
         return true;
       }
       return (
-        food.name.toLocaleLowerCase('zh-CN').includes(normalizedSearch) ||
-        FOOD_CATEGORY_LABELS[food.category].includes(normalizedSearch)
+        getFoodSearchText(food)
+          .toLocaleLowerCase(locale)
+          .includes(normalizedSearch) ||
+        t(FOOD_CATEGORY_LABEL_KEYS[food.category]).includes(normalizedSearch)
       );
     });
-  }, [category, foods, search]);
+  }, [category, foods, locale, search, t]);
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<FoodCategory, number>();
@@ -80,10 +87,10 @@ export function FoodsPage() {
         `calorie-foods-${getTodayIso()}.json`,
         stringifyFoodExport(foods),
       );
-      showToast(`已导出 ${foods.length} 项食物。`);
+      showToast(t('foods.exported', { n: foods.length }));
     } catch (error) {
       showToast(
-        error instanceof Error ? error.message : '导出失败，请重试。',
+        error instanceof Error ? error.message : t('foods.exportFailed'),
         'error',
       );
     }
@@ -93,12 +100,9 @@ export function FoodsPage() {
     <div className="foods-page page-width">
       <header className="page-header">
         <div>
-          <p className="eyebrow">你的营养资料</p>
-          <h1>食物库</h1>
-          <p>
-            内置常见健身食材与主食，也可以添加自己的常吃食物。
-            所有营养数据按每 100g 记录。
-          </p>
+          <p className="eyebrow">{t('foods.eyebrow')}</p>
+          <h1>{t('foods.title')}</h1>
+          <p>{t('foods.description')}</p>
         </div>
         <div className="page-header__actions">
           <Button
@@ -107,7 +111,7 @@ export function FoodsPage() {
             icon={<Upload size={16} />}
             onClick={() => setImportOpen(true)}
           >
-            导入 JSON
+            {t('foods.import')}
           </Button>
           <Button
             variant="secondary"
@@ -115,30 +119,32 @@ export function FoodsPage() {
             icon={<Download size={16} />}
             onClick={exportFoods}
           >
-            导出
+            {t('foods.export')}
           </Button>
           <Button
             size="sm"
             icon={<Plus size={16} />}
             onClick={openNewFood}
           >
-            添加食物
+            {t('foods.add')}
           </Button>
         </div>
       </header>
 
-      <section className="library-toolbar" aria-label="筛选食物">
+      <section className="library-toolbar" aria-label={t('foods.filterAria')}>
         <div className="search-field search-field--library">
           <Search size={18} aria-hidden="true" />
           <input
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="搜索食物名称或分类"
-            aria-label="搜索食物库"
+            placeholder={t('foods.searchPlaceholder')}
+            aria-label={t('foods.searchAria')}
           />
           {foods.length > 0 && (
-            <span className="search-field__count">{filteredFoods.length}</span>
+            <span className="search-field__count">
+              {filteredFoods.length}
+            </span>
           )}
         </div>
 
@@ -148,7 +154,7 @@ export function FoodsPage() {
             className={`filter-chip ${category === 'all' ? 'is-active' : ''}`}
             onClick={() => setCategory('all')}
           >
-            全部
+            {t('foods.all')}
             <small>{foods.length}</small>
           </button>
           {FOOD_CATEGORIES.map((item) =>
@@ -156,10 +162,12 @@ export function FoodsPage() {
               <button
                 type="button"
                 key={item}
-                className={`filter-chip ${category === item ? 'is-active' : ''}`}
+                className={`filter-chip ${
+                  category === item ? 'is-active' : ''
+                }`}
                 onClick={() => setCategory(item)}
               >
-                {FOOD_CATEGORY_LABELS[item]}
+                {t(FOOD_CATEGORY_LABEL_KEYS[item])}
                 <small>{categoryCounts.get(item)}</small>
               </button>
             ) : null,
@@ -177,35 +185,51 @@ export function FoodsPage() {
               onClick={() => openEditFood(food)}
             >
               <div className="food-card__top">
-                <span className={`category-pill category-pill--${food.category}`}>
-                  {FOOD_CATEGORY_LABELS[food.category]}
+                <span
+                  className={`category-pill category-pill--${food.category}`}
+                >
+                  {t(FOOD_CATEGORY_LABEL_KEYS[food.category])}
                 </span>
                 <span className="source-badge source-badge--small">
-                  {FOOD_SOURCE_LABELS[food.source]}
+                  {t(FOOD_SOURCE_LABEL_KEYS[food.source])}
                 </span>
               </div>
-              <h3>{food.name}</h3>
+              <h3>{getFoodDisplayName(food, locale)}</h3>
               <div className="food-card__energy">
                 <strong>{formatKcal(food.nutritionPer100g.kcal)}</strong>
-                <span>kcal / 100g</span>
+                <span>
+                  {t('common.kcal')} / 100g
+                </span>
               </div>
               <div className="food-card__macros">
                 <span>
-                  碳水 <strong>{formatDecimal(food.nutritionPer100g.carbsG)}g</strong>
+                  {t('common.carbs')}{' '}
+                  <strong>
+                    {formatDecimal(food.nutritionPer100g.carbsG)}
+                    {t('common.gram')}
+                  </strong>
                 </span>
                 <span>
-                  蛋白 <strong>{formatDecimal(food.nutritionPer100g.proteinG)}g</strong>
+                  {t('common.proteinShort')}{' '}
+                  <strong>
+                    {formatDecimal(food.nutritionPer100g.proteinG)}
+                    {t('common.gram')}
+                  </strong>
                 </span>
                 <span>
-                  脂肪 <strong>{formatDecimal(food.nutritionPer100g.fatG)}g</strong>
+                  {t('common.fat')}{' '}
+                  <strong>
+                    {formatDecimal(food.nutritionPer100g.fatG)}
+                    {t('common.gram')}
+                  </strong>
                 </span>
               </div>
               <div className="food-card__footer">
-                <span>{FOOD_BASIS_LABELS[food.basis]}</span>
+                <span>{t(FOOD_BASIS_LABEL_KEYS[food.basis])}</span>
                 <span>
                   {food.servings.length > 0
-                    ? `${food.servings.length} 种常用份量`
-                    : '按克记录'}
+                    ? t('common.servingCount', { n: food.servings.length })
+                    : t('foods.byGram')}
                 </span>
               </div>
             </button>
@@ -216,31 +240,31 @@ export function FoodsPage() {
           <div className="empty-panel__icon">
             <Search size={22} aria-hidden="true" />
           </div>
-          <h2>{foods.length === 0 ? '食物库还是空的' : '没有找到食物'}</h2>
+          <h2>
+            {foods.length === 0
+              ? t('foods.emptyTitle')
+              : t('foods.emptySearchTitle')}
+          </h2>
           <p>
             {foods.length === 0
-              ? '添加常吃食物，之后记录每一餐都会更快。'
-              : '换个关键词，或清除分类筛选再试试。'}
+              ? t('foods.emptyBody')
+              : t('foods.emptySearchBody')}
           </p>
           <Button
             size="sm"
             icon={<Plus size={16} />}
             onClick={openNewFood}
           >
-            添加自定义食物
+            {t('foods.addCustom')}
           </Button>
         </div>
       )}
 
       <div className="data-note">
-        <strong>关于营养数据</strong>
-        <p>{DATA_REFERENCE_NOTE}</p>
-        <p>
-          第一版所有内置数据使用未烹饪基准；熟重版本会在后续版本加入。
-        </p>
-        <p>
-          当前共 {foods.length} 项食物。点开任意食物即可修改，历史饮食记录会保留当时的营养快照。
-        </p>
+        <strong>{t('foods.dataTitle')}</strong>
+        <p>{t('notes.dataReference')}</p>
+        <p>{t('foods.dataBasis')}</p>
+        <p>{t('foods.dataCount', { n: foods.length })}</p>
       </div>
 
       <FoodEditorModal

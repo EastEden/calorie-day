@@ -4,6 +4,7 @@ import {
   Loader2,
   RefreshCw,
 } from 'lucide-react';
+import { useI18n } from './i18n';
 import { useApp } from './state/AppContext';
 import { BrandMark } from './ui/BrandMark';
 import { Button } from './ui/Button';
@@ -17,13 +18,15 @@ import { SettingsPage } from './features/settings/SettingsPage';
 import { ShareModal } from './features/share/ShareModal';
 
 function AppLoadingScreen() {
+  const { t } = useI18n();
+
   return (
     <div className="app-status-screen">
       <div className="app-status-screen__mark">
         <BrandMark size={54} />
       </div>
-      <h1>每日热量</h1>
-      <p>正在打开你的本地记录…</p>
+      <h1>{t('app.name')}</h1>
+      <p>{t('app.loadingText')}</p>
       <Loader2 className="app-status-screen__spinner" size={20} aria-hidden="true" />
     </div>
   );
@@ -36,18 +39,18 @@ function AppFatalScreen({
   message: string;
   onRetry: () => void;
 }) {
+  const { t } = useI18n();
+
   return (
     <div className="app-status-screen app-status-screen--error">
       <span className="app-status-screen__error-icon">
         <AlertTriangle size={26} aria-hidden="true" />
       </span>
-      <h1>没能打开本地记录</h1>
+      <h1>{t('app.fatalTitle')}</h1>
       <p>{message}</p>
-      <p className="app-status-screen__hint">
-        已有数据不会被自动清空。请确认浏览器没有禁用站点存储，然后重试。
-      </p>
+      <p className="app-status-screen__hint">{t('app.fatalHint')}</p>
       <Button icon={<RefreshCw size={16} />} onClick={onRetry}>
-        重新加载
+        {t('app.reload')}
       </Button>
     </div>
   );
@@ -63,6 +66,7 @@ export default function App() {
     logError,
     actions,
   } = useApp();
+  const { t } = useI18n();
   const [tab, setTab] = useState<AppTab>('diary');
   const [shareOpen, setShareOpen] = useState(false);
   const hadProfile = useRef(Boolean(profile));
@@ -86,7 +90,7 @@ export default function App() {
   if (status === 'fatal') {
     return (
       <AppFatalScreen
-        message={initializationError ?? '本地数据库暂时不可用。'}
+        message={initializationError ?? t('app.fatalFallback')}
         onRetry={actions.retryInitialization}
       />
     );
@@ -105,7 +109,7 @@ export default function App() {
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main-content">
-        跳到主要内容
+        {t('app.skipToMain')}
       </a>
 
       <TopBar

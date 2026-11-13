@@ -4,15 +4,16 @@ import {
   Settings2,
   type LucideIcon,
 } from 'lucide-react';
+import type { TranslationKey } from '../i18n';
 
 export type AppTab = 'diary' | 'foods' | 'settings';
 
 export const APP_TABS: {
   id: AppTab;
-  label: string;
+  labelKey: TranslationKey;
   icon: LucideIcon;
 }[] = [
-  { id: 'diary', label: '今日', icon: CalendarDays },
-  { id: 'foods', label: '食物库', icon: Salad },
-  { id: 'settings', label: '设置', icon: Settings2 },
+  { id: 'diary', labelKey: 'nav.diary', icon: CalendarDays },
+  { id: 'foods', labelKey: 'nav.foods', icon: Salad },
+  { id: 'settings', labelKey: 'nav.settings', icon: Settings2 },
 ];

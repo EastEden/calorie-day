@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { AlertCircle, CheckCircle2, Info, X } from 'lucide-react';
 import { createId } from '../domain/id';
+import { useI18n } from '../i18n';
 
 type ToastKind = 'success' | 'error' | 'info';
 
@@ -39,6 +40,7 @@ const toastIcons = {
 } as const;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const { t } = useI18n();
   const [messages, setMessages] = useState<ToastMessage[]>([]);
   const timers = useRef(new Map<string, number>());
 
@@ -93,7 +95,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 className="toast__close"
-                aria-label="关闭提示"
+                aria-label={t('ui.toastClose')}
                 onClick={() => dismiss(message.id)}
               >
                 <X size={14} aria-hidden="true" />

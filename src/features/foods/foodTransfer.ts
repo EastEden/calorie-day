@@ -1,9 +1,16 @@
 import { nowIsoTimestamp } from '../../domain/dates';
 import { createId } from '../../domain/id';
+import {
+  foodImportSchema,
+  normalizeImportedFood,
+} from '../../domain/schemas';
 import type { FoodImportPayload } from '../../domain/schemas';
-import { foodImportSchema } from '../../domain/schemas';
+import {
+  FOOD_NAME_FALLBACK_LOCALE,
+  normalizeLocalizedText,
+  resolveLocalizedText,
+} from '../../domain/localizedText';
 import type { Food, ImportedFoodInput } from '../../domain/types';
-import { normalizeImportedFood } from '../../domain/schemas';
 
 export interface ImportConflict {
   incoming: ImportedFoodInput;
@@ -19,16 +26,20 @@ export interface FoodImportPlan {
 }
 
 function normalizeName(name: string): string {
-  return name.trim().toLocaleLowerCase('zh-CN');
+  return name.trim().toLocaleLowerCase(FOOD_NAME_FALLBACK_LOCALE);
 }
 
 export function buildFoodImportPlan(
   existingFoods: Food[],
   payload: FoodImportPayload,
+  locale = FOOD_NAME_FALLBACK_LOCALE,
 ): FoodImportPlan {
   const byId = new Map(existingFoods.map((food) => [food.id, food]));
   const byName = new Map(
-    existingFoods.map((food) => [normalizeName(food.name), food]),
+    existingFoods.map((food) => [
+      normalizeName(food.names[FOOD_NAME_FALLBACK_LOCALE]),
+      food,
+    ]),
   );
   const newItems: ImportedFoodInput[] = [];
   const conflicts: ImportConflict[] = [];
@@ -39,11 +50,16 @@ export function buildFoodImportPlan(
       rawIncoming as ImportedFoodInput,
     );
     const idMatch = incoming.id ? byId.get(incoming.id) : undefined;
-    const nameMatch = byName.get(normalizeName(incoming.name));
+    const nameMatch = byName.get(
+      normalizeName(incoming.names[FOOD_NAME_FALLBACK_LOCALE]),
+    );
 
     if (idMatch && nameMatch && idMatch.id !== nameMatch.id) {
       blockingErrors.push(
-        `“${incoming.name}”同时与现有食物的 ID 和名称冲突，请修改文件中的名称或 ID。`,
+        `“${resolveLocalizedText(
+          incoming.names,
+          locale,
+        )}”同时与现有食物的 ID 和名称冲突，请修改文件中的名称或 ID。`,
       );
       continue;
     }
@@ -78,7 +94,7 @@ function makeImportedFood(
 
   return {
     id,
-    name: incoming.name.trim(),
+    names: normalizeLocalizedText(incoming.names),
     category: incoming.category,
     basis: incoming.basis,
     nutritionPer100g: { ...incoming.nutritionPer100g },
@@ -113,16 +129,16 @@ export function materializeImportedFoods(
 }
 
 export function buildFoodExportPayload(foods: Food[]): {
-  schemaVersion: 1;
+  schemaVersion: 2;
   exportedAt: string;
   foods: ImportedFoodInput[];
 } {
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     exportedAt: nowIsoTimestamp(),
     foods: foods.map((food) => ({
       id: food.id,
-      name: food.name,
+      names: { ...food.names },
       category: food.category,
       basis: food.basis,
       nutritionPer100g: { ...food.nutritionPer100g },
@@ -141,11 +157,13 @@ export function stringifyFoodExport(foods: Food[]): string {
 
 export function buildFoodImportTemplate(): string {
   const template = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     exportedAt: nowIsoTimestamp(),
     foods: [
       {
-        name: '示例：自制鸡胸肉丸',
+        names: {
+          'zh-CN': '示例：自制鸡胸肉丸',
+        },
         category: 'protein',
         basis: 'raw',
         nutritionPer100g: {

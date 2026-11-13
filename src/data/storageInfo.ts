@@ -1,4 +1,5 @@
 import type { StorageInfo } from '../domain/types';
+import { translate } from '../i18n/core';
 
 export async function getStorageInfo(
   requestPersistence = false,
@@ -52,7 +53,7 @@ export async function getStorageInfo(
 
 export function formatBytes(bytes: number | null): string {
   if (bytes === null || !Number.isFinite(bytes) || bytes < 0) {
-    return '未知';
+    return translate('storage.unknown');
   }
 
   if (bytes < 1024) {

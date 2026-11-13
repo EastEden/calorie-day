@@ -1,27 +1,32 @@
+import { getCurrentLocale } from '../i18n/core';
 import type { IsoDate } from './types';
 
 export const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
-const monthDayFormatter = new Intl.DateTimeFormat('zh-CN', {
-  month: 'long',
-  day: 'numeric',
-});
+type FormatterKind = 'monthDay' | 'weekday' | 'longDate' | 'time';
 
-const weekdayFormatter = new Intl.DateTimeFormat('zh-CN', {
-  weekday: 'short',
-});
+const formatterCache = new Map<string, Intl.DateTimeFormat>();
 
-const longDateFormatter = new Intl.DateTimeFormat('zh-CN', {
-  year: 'numeric',
-  month: 'long',
-  day: 'numeric',
-  weekday: 'long',
-});
+function getFormatter(kind: FormatterKind, locale: string): Intl.DateTimeFormat {
+  const key = `${kind}:${locale}`;
+  const cached = formatterCache.get(key);
+  if (cached) {
+    return cached;
+  }
 
-const timeFormatter = new Intl.DateTimeFormat('zh-CN', {
-  hour: '2-digit',
-  minute: '2-digit',
-});
+  const options: Intl.DateTimeFormatOptions =
+    kind === 'monthDay'
+      ? { month: 'long', day: 'numeric' }
+      : kind === 'weekday'
+        ? { weekday: 'short' }
+        : kind === 'longDate'
+          ? { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' }
+          : { hour: '2-digit', minute: '2-digit' };
+
+  const formatter = new Intl.DateTimeFormat(locale, options);
+  formatterCache.set(key, formatter);
+  return formatter;
+}
 
 export function toIsoDate(date: Date): IsoDate {
   const year = date.getFullYear();
@@ -69,11 +74,15 @@ export function isFutureDate(value: IsoDate, today = getTodayIso()): boolean {
 }
 
 export function formatMonthDay(value: IsoDate): string {
-  return monthDayFormatter.format(parseIsoDate(value));
+  return getFormatter('monthDay', getCurrentLocale()).format(
+    parseIsoDate(value),
+  );
 }
 
 export function formatWeekday(value: IsoDate): string {
-  return weekdayFormatter.format(parseIsoDate(value));
+  return getFormatter('weekday', getCurrentLocale()).format(
+    parseIsoDate(value),
+  );
 }
 
 export function formatShortDate(value: IsoDate): string {
@@ -81,33 +90,20 @@ export function formatShortDate(value: IsoDate): string {
 }
 
 export function formatLongDate(value: IsoDate): string {
-  return longDateFormatter
-    .format(parseIsoDate(value))
-    .replace(/(日)(星期)/, '$1 $2');
-}
+  const locale = getCurrentLocale();
+  const formatted = getFormatter('longDate', locale).format(
+    parseIsoDate(value),
+  );
 
-export function formatRelativeDay(value: IsoDate, today = getTodayIso()): string {
-  if (value === today) {
-    return '今天';
-  }
-
-  if (value === addDays(today, -1)) {
-    return '昨天';
-  }
-
-  return formatShortDate(value);
-}
-
-export function formatDayContext(value: IsoDate, today = getTodayIso()): string {
-  if (value === today) {
-    return `今天 · ${formatShortDate(value)}`;
-  }
-
-  return formatShortDate(value);
+  return locale.startsWith('zh')
+    ? formatted.replace(/(日)(星期)/, '$1 $2')
+    : formatted;
 }
 
 export function formatSavedAt(isoTimestamp: string): string {
-  return timeFormatter.format(new Date(isoTimestamp));
+  return getFormatter('time', getCurrentLocale()).format(
+    new Date(isoTimestamp),
+  );
 }
 
 export function nowIsoTimestamp(): string {

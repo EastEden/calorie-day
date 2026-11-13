@@ -1,5 +1,6 @@
 import { Share2 } from 'lucide-react';
-import { APP_TABS, type AppTab } from '../app/navigation';
+import { useI18n } from '../i18n';
+import { APP_TABS, type AppTab } from './navigation';
 import { BrandMark } from '../ui/BrandMark';
 import { Button } from '../ui/Button';
 
@@ -16,6 +17,8 @@ export function TopBar({
   onShare,
   shareDisabled,
 }: TopBarProps) {
+  const { t } = useI18n();
+
   return (
     <header className="topbar">
       <div className="topbar__inner page-width">
@@ -23,16 +26,16 @@ export function TopBar({
           type="button"
           className="brand"
           onClick={() => onTabChange('diary')}
-          aria-label="回到今日记录"
+          aria-label={t('topbar.brandAria')}
         >
           <BrandMark size={38} />
           <span className="brand__text">
-            <strong>每日热量</strong>
+            <strong>{t('app.name')}</strong>
             <small>CALORIE DAY</small>
           </span>
         </button>
 
-        <nav className="topnav" aria-label="主导航">
+        <nav className="topnav" aria-label={t('nav.mainAria')}>
           {APP_TABS.map((item) => {
             const Icon = item.icon;
             return (
@@ -46,7 +49,7 @@ export function TopBar({
                 aria-current={activeTab === item.id ? 'page' : undefined}
               >
                 <Icon size={17} strokeWidth={1.9} aria-hidden="true" />
-                {item.label}
+                {t(item.labelKey)}
               </button>
             );
           })}
@@ -58,10 +61,14 @@ export function TopBar({
           icon={<Share2 size={16} />}
           onClick={onShare}
           disabled={shareDisabled}
-          title={shareDisabled ? '先记录至少一项食物' : '生成今日营养分享图'}
+          title={
+            shareDisabled
+              ? t('topbar.shareDisabled')
+              : t('topbar.shareHint')
+          }
           className="topbar__share"
         >
-          分享
+          {t('topbar.share')}
         </Button>
       </div>
     </header>

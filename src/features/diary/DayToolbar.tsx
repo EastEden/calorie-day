@@ -11,9 +11,11 @@ import {
   getTodayIso,
   isToday,
 } from '../../domain/dates';
+import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 
 export function DayToolbar() {
+  const { t } = useI18n();
   const {
     selectedDate,
     isSaving,
@@ -34,7 +36,7 @@ export function DayToolbar() {
           className="icon-button day-toolbar__arrow"
           onClick={() => actions.selectDate(addDays(selectedDate, -1))}
           disabled={navigationDisabled}
-          aria-label="前一天"
+          aria-label={t('date.previous')}
         >
           <ChevronLeft size={20} />
         </button>
@@ -44,7 +46,9 @@ export function DayToolbar() {
             <CalendarDays size={18} aria-hidden="true" />
           </span>
           <span className="date-picker__text">
-            <strong>{onToday ? '今天' : formatShortDate(selectedDate)}</strong>
+            <strong>
+              {onToday ? t('date.today') : formatShortDate(selectedDate)}
+            </strong>
             <small>
               {onToday
                 ? formatShortDate(selectedDate)
@@ -62,7 +66,7 @@ export function DayToolbar() {
                 actions.selectDate(event.target.value);
               }
             }}
-            aria-label="选择要查看的日期"
+            aria-label={t('date.pickAria')}
           />
         </label>
 
@@ -71,7 +75,7 @@ export function DayToolbar() {
           className="icon-button day-toolbar__arrow"
           onClick={() => actions.selectDate(addDays(selectedDate, 1))}
           disabled={navigationDisabled || isAtLatest}
-          aria-label="后一天"
+          aria-label={t('date.next')}
         >
           <ChevronRight size={20} />
         </button>
@@ -85,15 +89,19 @@ export function DayToolbar() {
             onClick={() => actions.selectDate(today)}
             disabled={navigationDisabled}
           >
-            回到今天
+            {t('date.backToToday')}
           </button>
         )}
         <span className="save-state" aria-live="polite">
           {isSaving
-            ? '保存中…'
+            ? t('date.saving')
             : lastSavedAt
-              ? `已保存 · ${formatSavedAt(new Date(lastSavedAt).toISOString())}`
-              : '本地自动保存'}
+              ? t('date.savedAt', {
+                  time: formatSavedAt(
+                    new Date(lastSavedAt).toISOString(),
+                  ),
+                })
+              : t('date.autoSave')}
         </span>
       </div>
     </div>

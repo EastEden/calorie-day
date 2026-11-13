@@ -1,9 +1,59 @@
 import { z } from 'zod';
 import { ACTIVITY_LEVELS, FOOD_CATEGORIES, GOALS } from './constants';
 import { ISO_DATE_PATTERN, isValidIsoDate } from './dates';
-import type { ImportedFoodInput } from './types';
+import {
+  FOOD_NAME_FALLBACK_LOCALE,
+  FOOD_NAME_LOCALE_PATTERN,
+  MAX_FOOD_NAME_LENGTH,
+  MAX_FOOD_NAME_LOCALES,
+  normalizeLocalizedText,
+} from './localizedText';
+import type { ImportedFoodInput, LocalizedText } from './types';
 
 const finiteNumber = z.number().finite();
+
+const localizedNameValueSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(MAX_FOOD_NAME_LENGTH);
+
+/**
+ * Food names are stored as a locale -> text map. `zh-CN` is mandatory so
+ * every food always has a deterministic fallback, while additional locales
+ * can be imported without changing the schema version.
+ */
+export const localizedTextSchema = z
+  .record(z.string(), localizedNameValueSchema)
+  .superRefine((names, ctx) => {
+    if (!(FOOD_NAME_FALLBACK_LOCALE in names)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [FOOD_NAME_FALLBACK_LOCALE],
+        message: '食物名称至少需要提供 zh-CN 文本',
+      });
+    }
+
+    const locales = Object.keys(names);
+    if (locales.length > MAX_FOOD_NAME_LOCALES) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: [],
+        message: `食物名称最多包含 ${MAX_FOOD_NAME_LOCALES} 个语言版本`,
+      });
+    }
+
+    for (const locale of locales) {
+      if (!FOOD_NAME_LOCALE_PATTERN.test(locale)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: [locale],
+          message: '语言代码格式不正确',
+        });
+      }
+    }
+  })
+  .transform((names) => normalizeLocalizedText(names as LocalizedText));
 
 export const nutritionSchema = z.object({
   kcal: finiteNumber.min(0).max(100_000),
@@ -56,7 +106,7 @@ export const isoDateSchema = z
 
 export const foodSchema = z.object({
   id: z.string().min(1).max(120),
-  name: z.string().trim().min(1).max(80),
+  names: localizedTextSchema,
   category: foodCategorySchema,
   basis: foodBasisSchema,
   nutritionPer100g: nutritionSchema,
@@ -72,9 +122,24 @@ const importedServingSchema = z.object({
   grams: finiteNumber.positive().max(10_000),
 });
 
+const legacyImportedFoodSchema = z.object({
+  id: z.string().trim().min(1).max(120).optional(),
+  name: z.string().trim().min(1).max(MAX_FOOD_NAME_LENGTH),
+  category: foodCategorySchema,
+  basis: foodBasisSchema,
+  nutritionPer100g: nutritionSchema,
+  servings: z.array(importedServingSchema).max(20).optional(),
+});
+
+const legacyFoodImportSchema = z.object({
+  schemaVersion: z.literal(1),
+  exportedAt: timestampSchema.optional(),
+  foods: z.array(legacyImportedFoodSchema).min(1).max(1000),
+});
+
 export const importedFoodSchema = z.object({
   id: z.string().trim().min(1).max(120).optional(),
-  name: z.string().trim().min(1).max(80),
+  names: localizedTextSchema,
   category: foodCategorySchema,
   basis: foodBasisSchema,
   nutritionPer100g: nutritionSchema,
@@ -83,7 +148,7 @@ export const importedFoodSchema = z.object({
 
 export const foodImportSchema = z
   .object({
-    schemaVersion: z.literal(1),
+    schemaVersion: z.literal(2),
     exportedAt: timestampSchema.optional(),
     foods: z.array(importedFoodSchema).min(1).max(1000),
   })
@@ -103,11 +168,18 @@ export const foodImportSchema = z
         seenIds.add(food.id);
       }
 
-      const normalizedName = food.name.trim().toLocaleLowerCase('zh-CN');
+      const canonicalName = food.names?.[FOOD_NAME_FALLBACK_LOCALE];
+      if (typeof canonicalName !== 'string') {
+        return;
+      }
+
+      const normalizedName = canonicalName
+        .trim()
+        .toLocaleLowerCase('zh-CN');
       if (seenNames.has(normalizedName)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ['foods', index, 'name'],
+          path: ['foods', index, 'names', FOOD_NAME_FALLBACK_LOCALE],
           message: '导入文件内存在重复食物名称',
         });
       }
@@ -121,7 +193,7 @@ export const foodEntrySchema = z
   .object({
     id: z.string().min(1).max(120),
     foodId: z.string().min(1).max(120),
-    foodName: z.string().trim().min(1).max(80),
+    foodNames: localizedTextSchema,
     amountGrams: finiteNumber.positive().max(100_000),
     enteredQuantity: finiteNumber.positive().max(100_000),
     enteredUnit: z.enum(['g', 'serving']),
@@ -191,7 +263,7 @@ export const targetSettingsSchema = z.object({
 });
 
 export const appMetaSchema = z.object({
-  schemaVersion: z.literal(1),
+  schemaVersion: z.literal(2),
   seedVersion: z.literal(1),
   createdAt: timestampSchema,
 });
@@ -213,6 +285,34 @@ export interface FoodImportParseFailure {
   errors: string[];
 }
 
+function convertLegacyFoodImport(payload: {
+  schemaVersion: 1;
+  exportedAt?: string;
+  foods: {
+    id?: string;
+    name: string;
+    category: z.infer<typeof foodCategorySchema>;
+    basis: z.infer<typeof foodBasisSchema>;
+    nutritionPer100g: z.infer<typeof nutritionSchema>;
+    servings?: {
+      id?: string;
+      label: string;
+      grams: number;
+    }[];
+  }[];
+}): unknown {
+  return {
+    schemaVersion: 2,
+    exportedAt: payload.exportedAt,
+    foods: payload.foods.map(({ name, ...food }) => ({
+      ...food,
+      names: {
+        [FOOD_NAME_FALLBACK_LOCALE]: name,
+      },
+    })),
+  };
+}
+
 export function parseFoodImportJson(
   raw: string,
 ): FoodImportParseSuccess | FoodImportParseFailure {
@@ -224,7 +324,26 @@ export function parseFoodImportJson(
     return { success: false, errors: ['文件不是有效的 JSON。'] };
   }
 
-  const result = foodImportSchema.safeParse(parsed);
+  let candidate = parsed;
+
+  // v1 is accepted for backwards compatibility. New exports are always v2.
+  if (
+    typeof parsed === 'object' &&
+    parsed !== null &&
+    'schemaVersion' in parsed &&
+    parsed.schemaVersion === 1
+  ) {
+    const legacyResult = legacyFoodImportSchema.safeParse(parsed);
+    if (!legacyResult.success) {
+      return {
+        success: false,
+        errors: getZodIssueMessages(legacyResult.error),
+      };
+    }
+    candidate = convertLegacyFoodImport(legacyResult.data);
+  }
+
+  const result = foodImportSchema.safeParse(candidate);
 
   if (!result.success) {
     return { success: false, errors: getZodIssueMessages(result.error) };
@@ -236,7 +355,7 @@ export function parseFoodImportJson(
 export function normalizeImportedFood(food: ImportedFoodInput): ImportedFoodInput {
   return {
     ...food,
-    name: food.name.trim(),
+    names: normalizeLocalizedText(food.names),
     servings: food.servings?.map((serving) => ({
       ...serving,
       label: serving.label.trim(),

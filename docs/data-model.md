@@ -32,9 +32,17 @@ type FoodCategory =
 
 type FoodBasis = 'raw' | 'dry' | 'as_sold';
 
+/**
+ * 语言代码 -> 文本。zh-CN 必须有值，作为兜底。
+ * 额外语言不需要提升 schemaVersion。
+ */
+type LocalizedText = Record<string, string> & {
+  'zh-CN': string;
+};
+
 interface Food {
   id: string;
-  name: string;
+  names: LocalizedText;
   category: FoodCategory;
   basis: FoodBasis;
   nutritionPer100g: Nutrition;
@@ -47,7 +55,7 @@ interface Food {
 interface FoodEntry {
   id: string;
   foodId: string;
-  foodName: string; // 快照
+  foodNames: LocalizedText; // 名称快照
   amountGrams: number;
   enteredQuantity: number;
   enteredUnit: 'g' | 'serving';
@@ -86,7 +94,8 @@ interface TargetSettings {
 
 ## 3. IndexedDB 存储
 
-数据库：`calorie-day`，版本 `1`。
+数据库：`calorie-day`，版本 `2`。从 v1 升级时会自动把食物 `name` 和记录
+`foodName` 转成 `names` / `foodNames`，并为现有中文文本补上 `zh-CN`。
 
 | Object store | Key | Value |
 | --- | --- | --- |
@@ -96,17 +105,29 @@ interface TargetSettings {
 | `foods` | `food.id` | `Food` |
 | `logs` | `YYYY-MM-DD` | `DailyLog` |
 
-`foods` 有 `by_category`、`by_name` 索引；`logs` 有 `by_updated_at` 索引，为未来趋势查询预留。
+`foods` 有 `by_category` 索引；`logs` 有 `by_updated_at` 索引，为未来趋势查询预留。
+v2 删除了旧的 `by_name` 索引，因为名称现在是多语言对象，不再适合作为单值索引。
 
 ## 4. 关键决策
 
 ### 4.1 食物条目保存快照
 
-`FoodEntry` 同时保存食物名称、每 100g 营养和实际克数。这样：
+`FoodEntry` 同时保存食物名称映射、每 100g 营养和实际克数。这样：
 
-- 修改食物库不会改变历史记录。
+- 修改食物库、切换界面语言或增加翻译不会改变历史记录的结构。
 - 删除食物后，已经记录的数据仍能显示和编辑。
 - 后端同步时，历史记录可以独立于食物库存在。
+- 快照保留当时可用的全部语言名称，而不只是当前 locale。
+
+### 4.1.1 食物名称本地化
+
+食物名称使用 `names` 映射，而不是单字符串或数据库列：
+
+- `zh-CN` 必须有值并作为兜底，避免任何 locale 下出现空名称。
+- 导入格式允许附加任意符合 BCP 47 风格的语言代码，最多 20 个。
+- 显示时按“当前 locale → 同语言 → zh-CN → 第一个可用值”回退。
+- 搜索会匹配所有语言名称；导入冲突匹配优先使用稳定 `id`，名称匹配使用 `zh-CN` 规范化值。
+- 未来后端可以把映射展开成 `food_translations(food_id, locale, name)`，API DTO 仍返回映射，前端无需改展示模型。
 
 ### 4.2 克数是统一计量
 
@@ -175,6 +196,9 @@ PUT    /me/logs/:date
 `PUT /me/logs/:date` 建议接收完整 `DailyLog`（不含 `revision` 由服务端生成）或使用
 `If-Match` / 客户端 revision 做乐观锁。服务端返回提交后的记录。
 
+食物接口返回的 `names` 是语言映射；服务端内部可以规范化为 translation 表，但响应
+保持 `names` 形式。`DailyLog` 中的 `foodNames` 是记录时快照，不应由服务端重新翻译。
+
 ## 7. 推荐值计算
 
 ```text
@@ -216,10 +240,13 @@ TDEE = BMR × 活动系数
 - 计划摄入：新增独立的计划数据类型和 Repository 方法，不污染实际日志。
 - 趋势：利用 `logs` 的日期主键和 `by_updated_at` 索引，按范围读取。
 - 云同步：所有实体有稳定 ID 和 ISO 时间戳；每日日志有 revision。
-- 导入格式：使用 `schemaVersion` 显式版本化，可新增迁移器。
+- 导入格式：使用 `schemaVersion` 显式版本化，可新增迁移器；当前 v2 支持多语言名称，并兼容读取 v1。
+- 多语言名称：新增语言只需要补充数据中的 `names`，不需要修改食物结构或导入版本。
 
 ## 10. 已知未覆盖项
 
 - 每日记录的完整导出/恢复尚未实现。当前食物库导出只包含食物数据。
 - 多标签页对食物库的编辑没有 revision 冲突保护；每日记录有。
 - 历史目标版本化尚未实现。
+- 食物名称编辑界面目前只编辑 `zh-CN`；导入的其他语言名称会保留，但还没有逐语言编辑 UI。
+- 份量名称（如“个”“杯”）仍是单语言字符串，尚未纳入名称映射。

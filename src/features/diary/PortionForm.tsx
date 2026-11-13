@@ -15,6 +15,7 @@ import {
   formatKcal,
 } from '../../domain/formatters';
 import { scaleNutrition } from '../../domain/nutrition';
+import { useI18n } from '../../i18n';
 import { Button } from '../../ui/Button';
 
 export interface PortionInitial {
@@ -47,6 +48,7 @@ export function PortionForm({
   disabled = false,
   secondaryAction,
 }: PortionFormProps) {
+  const { t } = useI18n();
   const initialServing = useMemo<ServingOption | null>(() => {
     if (
       initial?.enteredUnit !== 'serving' ||
@@ -169,11 +171,11 @@ export function PortionForm({
           unit === 'serving' ? selectedServing?.grams : undefined,
       });
       if (!ok) {
-        setSubmitError('保存失败，请重试。');
+        setSubmitError(t('portion.saveError'));
       }
     } catch (error) {
       setSubmitError(
-        error instanceof Error ? error.message : '保存失败，请重试。',
+        error instanceof Error ? error.message : t('portion.saveError'),
       );
     } finally {
       setSubmitting(false);
@@ -183,24 +185,33 @@ export function PortionForm({
   return (
     <form className="portion-form" onSubmit={handleSubmit}>
       <div className="portion-form__per100">
-        <span>每 100g</span>
-        <strong>{formatKcal(nutritionPer100g.kcal)} kcal</strong>
+        <span>{t('portion.per100')}</span>
+        <strong>
+          {formatKcal(nutritionPer100g.kcal)} {t('common.kcal')}
+        </strong>
         <small>
-          碳水 {formatDecimal(nutritionPer100g.carbsG)}g · 蛋白{' '}
-          {formatDecimal(nutritionPer100g.proteinG)}g · 脂肪{' '}
-          {formatDecimal(nutritionPer100g.fatG)}g
+          {t('common.carbs')} {formatDecimal(nutritionPer100g.carbsG)}
+          {t('common.gram')} · {t('common.proteinShort')}{' '}
+          {formatDecimal(nutritionPer100g.proteinG)}
+          {t('common.gram')} · {t('common.fat')}{' '}
+          {formatDecimal(nutritionPer100g.fatG)}
+          {t('common.gram')}
         </small>
       </div>
 
       {availableServings.length > 0 && (
-        <div className="segmented" role="group" aria-label="计量方式">
+        <div
+          className="segmented"
+          role="group"
+          aria-label={t('portion.modeAria')}
+        >
           <button
             type="button"
             className={`segmented__option ${unit === 'g' ? 'is-active' : ''}`}
             onClick={() => switchUnit('g')}
             disabled={isBusy}
           >
-            按克
+            {t('portion.modeGrams')}
           </button>
           <button
             type="button"
@@ -210,14 +221,14 @@ export function PortionForm({
             onClick={() => switchUnit('serving')}
             disabled={isBusy}
           >
-            按份
+            {t('portion.modeServing')}
           </button>
         </div>
       )}
 
       {unit === 'serving' && availableServings.length > 0 && (
         <div className="serving-picker">
-          <span className="field-label">选择份量</span>
+          <span className="field-label">{t('portion.chooseServing')}</span>
           <div className="choice-chips">
             {availableServings.map((serving) => (
               <button
@@ -230,7 +241,10 @@ export function PortionForm({
                 disabled={isBusy}
               >
                 {serving.label}
-                <small>{formatDecimal(serving.grams)}g</small>
+                <small>
+                  {formatDecimal(serving.grams)}
+                  {t('common.gram')}
+                </small>
               </button>
             ))}
           </div>
@@ -239,7 +253,9 @@ export function PortionForm({
 
       <div className="amount-field">
         <label htmlFor="portion-quantity">
-          {unit === 'serving' ? '份数' : '克数'}
+          {unit === 'serving'
+            ? t('portion.servingsLabel')
+            : t('portion.gramsLabel')}
         </label>
         <div className="amount-field__control">
           <input
@@ -254,12 +270,17 @@ export function PortionForm({
             disabled={isBusy}
           />
           <span id="portion-unit-label">
-            {unit === 'serving' ? selectedServing?.label ?? '份' : 'g'}
+            {unit === 'serving'
+              ? selectedServing?.label ?? t('portion.servingFallback')
+              : t('common.gram')}
           </span>
         </div>
       </div>
 
-      <div className="quick-amounts" aria-label="快捷份量">
+      <div
+        className="quick-amounts"
+        aria-label={t('portion.quickAria')}
+      >
         {unit === 'g'
           ? [50, 100, 150, 200].map((value) => (
               <button
@@ -269,7 +290,7 @@ export function PortionForm({
                 onClick={() => setQuantity(String(value))}
                 disabled={isBusy}
               >
-                {value}g
+                {t('portion.quickGram', { value })}
               </button>
             ))
           : [0.5, 1, 1.5, 2].map((value) => (
@@ -280,14 +301,14 @@ export function PortionForm({
                 onClick={() => setQuantity(String(value))}
                 disabled={isBusy}
               >
-                {value} 份
+                {t('portion.quickServing', { value })}
               </button>
             ))}
       </div>
 
       {attempted && !isValid && (
         <p className="form-error" role="alert">
-          请输入大于 0 的有效份量。
+          {t('portion.invalid')}
         </p>
       )}
       {submitError && (
@@ -298,25 +319,43 @@ export function PortionForm({
 
       <div className="portion-preview">
         <div className="portion-preview__energy">
-          <span>本次摄入</span>
-          <strong>{formatKcal(scaled.kcal)} kcal</strong>
+          <span>{t('portion.thisIntake')}</span>
+          <strong>
+            {formatKcal(scaled.kcal)} {t('common.kcal')}
+          </strong>
           <small>
             {unit === 'serving' && selectedServing
-              ? `${formatDecimal(parsedQuantity || 0)} ${selectedServing.label} · ${formatDecimal(
-                  isValid ? grams : 0,
-                )}g`
-              : `${formatDecimal(isValid ? grams : 0)}g`}
+              ? t('portion.servingDetail', {
+                  quantity: formatDecimal(parsedQuantity || 0),
+                  label: selectedServing.label,
+                  grams: formatDecimal(isValid ? grams : 0),
+                })
+              : t('portion.gramsDetail', {
+                  grams: formatDecimal(isValid ? grams : 0),
+                })}
           </small>
         </div>
         <div className="portion-preview__macros">
           <span>
-            碳水 <strong>{formatDecimal(scaled.carbsG)}g</strong>
+            {t('common.carbs')}{' '}
+            <strong>
+              {formatDecimal(scaled.carbsG)}
+              {t('common.gram')}
+            </strong>
           </span>
           <span>
-            蛋白 <strong>{formatDecimal(scaled.proteinG)}g</strong>
+            {t('common.proteinShort')}{' '}
+            <strong>
+              {formatDecimal(scaled.proteinG)}
+              {t('common.gram')}
+            </strong>
           </span>
           <span>
-            脂肪 <strong>{formatDecimal(scaled.fatG)}g</strong>
+            {t('common.fat')}{' '}
+            <strong>
+              {formatDecimal(scaled.fatG)}
+              {t('common.gram')}
+            </strong>
           </span>
         </div>
       </div>

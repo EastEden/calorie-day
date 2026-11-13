@@ -4,11 +4,13 @@ import {
   FlaskConical,
   Trash2,
 } from 'lucide-react';
+import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { Button } from '../../ui/Button';
 import { Modal } from '../../ui/Modal';
 
 export function LocalToolsCard() {
+  const { t } = useI18n();
   const { actions, isSaving } = useApp();
   const [open, setOpen] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -39,7 +41,7 @@ export function LocalToolsCard() {
 
     const ok = await actions.resetAllData();
     if (!ok) {
-      setError('重置失败，请重试。');
+      setError(t('localTools.failed'));
       setResetting(false);
     }
   };
@@ -52,12 +54,9 @@ export function LocalToolsCard() {
       >
         <header className="settings-card__header">
           <div>
-            <p className="eyebrow">仅本地 / 测试环境</p>
-            <h2 id="local-tools-title">本地测试工具</h2>
-            <p>
-              这个卡片只在开发环境或 localhost 中出现，生产域名默认不会显示。
-              用于快速清空并重新测试首次使用流程。
-            </p>
+            <p className="eyebrow">{t('localTools.eyebrow')}</p>
+            <h2 id="local-tools-title">{t('localTools.title')}</h2>
+            <p>{t('localTools.description')}</p>
           </div>
           <span className="storage-icon storage-icon--danger" aria-hidden="true">
             <FlaskConical size={22} />
@@ -68,11 +67,8 @@ export function LocalToolsCard() {
           <div className="local-tools__notice">
             <AlertTriangle size={18} aria-hidden="true" />
             <div>
-              <strong>全局重置会删除当前浏览器里的全部应用数据</strong>
-              <p>
-                包括个人资料、推荐目标、所有日期的饮食记录和食物库。
-                操作完成后会重新加载并回到首次设置页面。
-              </p>
+              <strong>{t('localTools.warningTitle')}</strong>
+              <p>{t('localTools.warning')}</p>
             </div>
           </div>
           <Button
@@ -82,22 +78,19 @@ export function LocalToolsCard() {
             onClick={openDialog}
             disabled={isSaving}
           >
-            重置全部本地数据
+            {t('localTools.reset')}
           </Button>
         </div>
 
-        <p className="settings-card__note">
-          仅删除本应用的 IndexedDB 数据库，不影响同一浏览器中的其他网站。
-          操作不可撤销，建议先确认没有其他标签页正在使用本应用。
-        </p>
+        <p className="settings-card__note">{t('localTools.note')}</p>
       </section>
 
       <Modal
         open={open}
         onClose={closeDialog}
         size="sm"
-        title="重置全部本地数据？"
-        description="这是一个仅用于本地测试的不可撤销操作。"
+        title={t('localTools.dialogTitle')}
+        description={t('localTools.dialogDescription')}
         footer={
           <>
             <Button
@@ -105,7 +98,7 @@ export function LocalToolsCard() {
               onClick={closeDialog}
               disabled={resetting}
             >
-              取消
+              {t('common.cancel')}
             </Button>
             <Button
               variant="danger"
@@ -114,7 +107,7 @@ export function LocalToolsCard() {
               disabled={!confirmed}
               onClick={() => void handleReset()}
             >
-              确认重置
+              {t('localTools.confirm')}
             </Button>
           </>
         }
@@ -122,20 +115,15 @@ export function LocalToolsCard() {
         <div className="reset-dialog">
           <div className="reset-dialog__warning">
             <AlertTriangle size={20} aria-hidden="true" />
-            <p>
-              重置后，本应用会删除以下数据，并重新载入首次设置：
-            </p>
+            <p>{t('localTools.dialogIntro')}</p>
           </div>
           <ul className="reset-dialog__list">
-            <li>个人资料与推荐目标</li>
-            <li>所有日期的早餐、午餐、晚餐、加餐记录</li>
-            <li>食物库、自定义食物和 JSON 导入的食物</li>
-            <li>本应用的 IndexedDB 数据库及其索引</li>
+            <li>{t('localTools.itemProfile')}</li>
+            <li>{t('localTools.itemLogs')}</li>
+            <li>{t('localTools.itemFoods')}</li>
+            <li>{t('localTools.itemDatabase')}</li>
           </ul>
-          <p className="reset-dialog__hint">
-            如果其他「每日热量」标签页仍然打开，删除可能被阻止。
-            请先关闭其他标签页，再执行重置。
-          </p>
+          <p className="reset-dialog__hint">{t('localTools.tabsHint')}</p>
 
           <label className="check-row check-row--danger">
             <input
@@ -145,8 +133,8 @@ export function LocalToolsCard() {
               disabled={resetting}
             />
             <span>
-              <strong>我明白此操作不可撤销</strong>
-              <small>重置会清空本应用的全部本地记录。</small>
+              <strong>{t('localTools.confirmTitle')}</strong>
+              <small>{t('localTools.confirmHint')}</small>
             </span>
           </label>
 
