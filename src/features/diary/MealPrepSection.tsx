@@ -26,6 +26,9 @@ export function MealPrepSection() {
   const [confirmDisposeId, setConfirmDisposeId] = useState<string | null>(
     null,
   );
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(
+    null,
+  );
 
   const batches = useMemo(
     () => foods.filter((food) => food.batch),
@@ -44,13 +47,15 @@ export function MealPrepSection() {
   }).length;
 
   const handleDelete = async (batch: Food) => {
-    if (!window.confirm(t('batch.deleteConfirm'))) {
-      return;
-    }
     try {
       await actions.deleteFood(batch.id);
-    } catch {
-      // The app-level action already surfaces storage errors as toasts.
+    } catch (error) {
+      showToast(
+        error instanceof Error ? error.message : t('batch.deleteError'),
+        'error',
+      );
+    } finally {
+      setConfirmDeleteId(null);
     }
   };
 
@@ -170,18 +175,43 @@ export function MealPrepSection() {
                       })}
                     </small>
                   </div>
-                  <button
-                    type="button"
-                    className="icon-button meal-prep-row__delete"
-                    onClick={() => void handleDelete(batch)}
-                    aria-label={t('batch.deleteAria', {
-                      name: getFoodDisplayName(batch, locale),
-                    })}
-                    title={t('batch.delete')}
-                    disabled={isSaving}
-                  >
-                    <Trash2 size={14} aria-hidden="true" />
-                  </button>
+                  {confirmDeleteId === batch.id ? (
+                    <div className="meal-prep-row__delete-confirm">
+                      <Button
+                        variant="danger"
+                        size="sm"
+                        onClick={() => void handleDelete(batch)}
+                        disabled={isSaving}
+                        title={t('batch.deleteConfirm')}
+                      >
+                        {t('batch.deleteConfirmAction')}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setConfirmDeleteId(null)}
+                        disabled={isSaving}
+                      >
+                        {t('common.cancel')}
+                      </Button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      className="icon-button meal-prep-row__delete"
+                      onClick={() => {
+                        setConfirmDisposeId(null);
+                        setConfirmDeleteId(batch.id);
+                      }}
+                      aria-label={t('batch.deleteAria', {
+                        name: getFoodDisplayName(batch, locale),
+                      })}
+                      title={t('batch.delete')}
+                      disabled={isSaving}
+                    >
+                      <Trash2 size={14} aria-hidden="true" />
+                    </button>
+                  )}
                 </div>
 
                 <div className="progress-track meal-prep-row__progress">
@@ -231,7 +261,10 @@ export function MealPrepSection() {
                           variant="ghost"
                           size="sm"
                           className="meal-prep-row__dispose"
-                          onClick={() => setConfirmDisposeId(batch.id)}
+                          onClick={() => {
+                            setConfirmDeleteId(null);
+                            setConfirmDisposeId(batch.id);
+                          }}
                           disabled={isSaving}
                         >
                           {t('batch.dispose')}

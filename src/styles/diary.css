@@ -637,6 +637,13 @@
   color: var(--muted-soft);
 }
 
+.meal-prep-row__delete-confirm {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+
 .meal-prep-row__progress {
   height: 6px;
   margin: 10px 0 9px;

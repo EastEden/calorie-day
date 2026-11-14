@@ -300,6 +300,8 @@ export const zhCN = {
   'batch.delete': '删除',
   'batch.deleteConfirm':
     '删除这个备餐？已经记录的饮食不会被删除。',
+  'batch.deleteConfirmAction': '确认删除',
+  'batch.deleteError': '删除失败，请重试。',
   'batch.foodName': '{{name}}（备餐）',
   'batch.portionLabel': '份',
   'batch.remainingPortions': '约 {{n}} 份',
