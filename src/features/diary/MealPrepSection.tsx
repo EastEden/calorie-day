@@ -12,15 +12,20 @@ import type { Food } from '../../domain/types';
 import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { Button } from '../../ui/Button';
+import { useToast } from '../../ui/ToastProvider';
 import { BatchPortionModal } from './BatchPortionModal';
 import { CreateBatchModal } from './CreateBatchModal';
 
 export function MealPrepSection() {
   const { t, locale } = useI18n();
+  const { showToast } = useToast();
   const { foods, foodUsage, actions, isSaving } = useApp();
   const [expanded, setExpanded] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [recordingBatch, setRecordingBatch] = useState<Food | null>(null);
+  const [confirmDisposeId, setConfirmDisposeId] = useState<string | null>(
+    null,
+  );
 
   const batches = useMemo(
     () => foods.filter((food) => food.batch),
@@ -50,13 +55,17 @@ export function MealPrepSection() {
   };
 
   const handleDispose = async (batch: Food) => {
-    if (!window.confirm(t('batch.disposeConfirm'))) {
-      return;
-    }
     try {
       await actions.disposeMealPrepBatch(batch);
-    } catch {
-      // The app-level action already surfaces storage errors as toasts.
+    } catch (error) {
+      showToast(
+        error instanceof Error
+          ? error.message
+          : t('batch.disposeError'),
+        'error',
+      );
+    } finally {
+      setConfirmDisposeId(null);
     }
   };
 
@@ -197,15 +206,37 @@ export function MealPrepSection() {
                   </div>
                   {!finished && !disposed && (
                     <div className="meal-prep-row__actions">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="meal-prep-row__dispose"
-                        onClick={() => void handleDispose(batch)}
-                        disabled={isSaving}
-                      >
-                        {t('batch.dispose')}
-                      </Button>
+                      {confirmDisposeId === batch.id ? (
+                        <>
+                          <Button
+                            variant="danger"
+                            size="sm"
+                            onClick={() => void handleDispose(batch)}
+                            disabled={isSaving}
+                            title={t('batch.disposeConfirm')}
+                          >
+                            {t('batch.disposeConfirmAction')}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setConfirmDisposeId(null)}
+                            disabled={isSaving}
+                          >
+                            {t('common.cancel')}
+                          </Button>
+                        </>
+                      ) : (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="meal-prep-row__dispose"
+                          onClick={() => setConfirmDisposeId(batch.id)}
+                          disabled={isSaving}
+                        >
+                          {t('batch.dispose')}
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         onClick={() => setRecordingBatch(batch)}

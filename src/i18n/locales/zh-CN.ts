@@ -273,6 +273,8 @@ export const zhCN = {
   'batch.dispose': '丢弃剩余',
   'batch.disposeConfirm':
     '丢弃剩余部分？丢弃不会计入热量摄入，也不能恢复。',
+  'batch.disposeConfirmAction': '确认丢弃',
+  'batch.disposeError': '丢弃失败，请重试。',
   'batch.disposed': '已丢弃',
   'batch.create': '新建备餐',
   'batch.createTitle': '新建备餐',

@@ -71,8 +71,6 @@ export function DiaryPage({ onShare }: DiaryPageProps) {
 
   return (
     <div className="diary-page page-width">
-      {contentReady && <MealPrepSection />}
-
       <DayToolbar />
 
       {isLogLoading && <DiarySkeleton />}
@@ -121,6 +119,8 @@ export function DiaryPage({ onShare }: DiaryPageProps) {
                 {t('diary.recordsCount', { n: summary.entryCount })}
               </span>
             </div>
+
+            <MealPrepSection />
 
             <div className="meal-list">
               {MEAL_TYPES.map((mealType) => (
