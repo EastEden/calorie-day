@@ -272,6 +272,7 @@ export const zhCN = {
   'batch.dispose': '确认吃完',
   'batch.disposeConfirm':
     '确认把剩余部分吃完？不会计入热量摄入，也不能恢复。',
+  'batch.disposeConfirmAction': '确定吃完',
   'batch.disposeError': '操作失败，请重试。',
   'batch.create': '新建备餐',
   'batch.createTitle': '新建备餐',
