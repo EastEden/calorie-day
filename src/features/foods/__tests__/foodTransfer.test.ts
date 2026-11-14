@@ -106,6 +106,30 @@ describe('foodTransfer', () => {
     expect(parsed.success).toBe(true);
   });
 
+  it('preserves batch metadata through a food export and import', () => {
+    const batchFood: Food = {
+      ...existing,
+      id: 'batch-export',
+      names: { 'zh-CN': '备餐导出' },
+      batch: {
+        totalGrams: 1200,
+        portionGrams: 300,
+        sourceFoodId: existing.id,
+      },
+    };
+    const exportPayload = buildFoodExportPayload([batchFood]);
+    expect(exportPayload.foods[0]?.batch).toEqual(batchFood.batch);
+
+    const parsed = foodImportSchema.safeParse(exportPayload);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) {
+      return;
+    }
+    const plan = buildFoodImportPlan([], parsed.data);
+    const foods = materializeImportedFoods(plan, false);
+    expect(foods[0]?.batch).toEqual(batchFood.batch);
+  });
+
   it('builds a v1 template with a required zh-CN name', () => {
     const template = JSON.parse(buildFoodImportTemplate()) as {
       schemaVersion: number;

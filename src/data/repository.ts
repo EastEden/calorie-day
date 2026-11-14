@@ -14,6 +14,7 @@ import type {
   BackupPayload,
   DailyLog,
   Food,
+  Nutrition,
   TargetSettings,
   UserProfile,
 } from '../domain/types';
@@ -55,7 +56,17 @@ export interface CalorieRepository {
   deleteFood(foodId: string): Promise<void>;
   getDailyLog(date: string): Promise<DailyLog | null>;
   listDailyLogs(fromDate?: string, toDate?: string): Promise<DailyLog[]>;
+  getFoodUsage(): Promise<Record<string, number>>;
   saveDailyLog(log: DailyLog): Promise<DailyLog>;
+  backfillDailyLogSnapshots(
+    target: Nutrition,
+    weightKg: number | null,
+  ): Promise<void>;
+  updateDailyLogSnapshot(
+    date: string,
+    target: Nutrition,
+    weightKg: number | null,
+  ): Promise<void>;
   importBackup(payload: BackupPayload): Promise<BackupImportResult>;
   resetAllData(): Promise<void>;
 }
@@ -550,6 +561,87 @@ export class IndexedDbRepository implements CalorieRepository {
         `每日记录第 ${index + 1} 条`,
       ),
     );
+  }
+
+  async backfillDailyLogSnapshots(
+    target: Nutrition,
+    weightKg: number | null,
+  ): Promise<void> {
+    await this.initialize();
+    const db = await this.getDb();
+    const transaction = db.transaction(STORES.logs, 'readwrite');
+    const store = transaction.objectStore(STORES.logs);
+    const request = store.openCursor();
+
+    request.onsuccess = () => {
+      const cursor = request.result;
+      if (!cursor) {
+        return;
+      }
+
+      const log = cursor.value;
+      if (isRecord(log)) {
+        const needsTarget =
+          log.targetSnapshot === undefined || log.targetSnapshot === null;
+        const needsWeight =
+          weightKg !== null &&
+          (log.weightKgSnapshot === undefined ||
+            log.weightKgSnapshot === null);
+        if (needsTarget || needsWeight) {
+          cursor.update({
+            ...log,
+            targetSnapshot:
+              log.targetSnapshot ?? { ...target },
+            weightKgSnapshot:
+              log.weightKgSnapshot ?? weightKg,
+          });
+        }
+      }
+      cursor.continue();
+    };
+
+    await transactionAsPromise(transaction);
+  }
+
+  async getFoodUsage(): Promise<Record<string, number>> {
+    const logs = await this.listDailyLogs();
+    const usage: Record<string, number> = {};
+
+    for (const log of logs) {
+      for (const entries of Object.values(log.meals)) {
+        for (const entry of entries) {
+          usage[entry.foodId] = (usage[entry.foodId] ?? 0) + entry.amountGrams;
+        }
+      }
+    }
+
+    return usage;
+  }
+
+  async updateDailyLogSnapshot(
+    date: string,
+    target: Nutrition,
+    weightKg: number | null,
+  ): Promise<void> {
+    await this.initialize();
+    const isoDate = isoDateSchema.parse(date);
+    const db = await this.getDb();
+    const transaction = db.transaction(STORES.logs, 'readwrite');
+    const store = transaction.objectStore(STORES.logs);
+    const request = store.get(isoDate);
+
+    request.onsuccess = () => {
+      const log = request.result;
+      if (isRecord(log)) {
+        store.put({
+          ...log,
+          targetSnapshot: { ...target },
+          weightKgSnapshot: weightKg,
+        });
+      }
+    };
+
+    await transactionAsPromise(transaction);
   }
 
   /**

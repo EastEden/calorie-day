@@ -476,6 +476,111 @@
   background: #f0ebe0;
 }
 
+/* Meal prep batches */
+.meal-prep-section {
+  margin-top: 28px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.meal-prep-section__intro {
+  margin: 8px 0 14px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.meal-prep-section__empty {
+  padding: 14px 16px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.meal-prep-list {
+  display: grid;
+  gap: 10px;
+}
+
+.meal-prep-row {
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+}
+
+.meal-prep-row__header,
+.meal-prep-row__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.meal-prep-row__title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.meal-prep-row__title strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meal-prep-row__title small,
+.meal-prep-row__footer small {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.meal-prep-row__delete {
+  width: 28px;
+  height: 28px;
+  flex: none;
+  color: var(--muted-soft);
+}
+
+.meal-prep-row__progress {
+  height: 6px;
+  margin: 10px 0 9px;
+}
+
+.meal-prep-row__footer strong {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 11.5px;
+  font-weight: 680;
+}
+
+.meal-prep-form,
+.meal-prep-portion {
+  display: grid;
+  gap: 16px;
+}
+
+@media (max-width: 640px) {
+  .meal-prep-section {
+    margin-top: 22px;
+    padding: 16px;
+  }
+
+  .meal-prep-row__footer {
+    align-items: flex-end;
+  }
+}
+
 /* Meals */
 .meals-section {
   min-width: 0;

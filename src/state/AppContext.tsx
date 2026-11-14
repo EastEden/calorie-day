@@ -60,6 +60,11 @@ import type {
   UserProfile,
 } from '../domain/types';
 import { useToast } from '../ui/ToastProvider';
+import {
+  clearRecentFoodIds,
+  loadRecentFoodIds,
+  rememberRecentFoodId,
+} from './recentFoods';
 
 const repository: CalorieRepository = new IndexedDbRepository();
 
@@ -87,6 +92,11 @@ interface AppActions {
     amount: EntryAmountInput,
   ) => Promise<boolean>;
   deleteEntry: (mealType: MealType, entryId: string) => Promise<boolean>;
+  createMealPrepBatch: (
+    sourceFood: Food,
+    totalGrams: number,
+    portionGrams: number,
+  ) => Promise<Food>;
   createFood: (draft: FoodDraft) => Promise<Food>;
   updateFood: (foodId: string, draft: FoodDraft) => Promise<Food>;
   deleteFood: (foodId: string) => Promise<void>;
@@ -110,6 +120,8 @@ interface AppContextValue {
   profile: UserProfile | null;
   targetSettings: TargetSettings;
   foods: Food[];
+  recentFoodIds: string[];
+  foodUsage: Record<string, number>;
   targets: Nutrition | null;
   selectedDate: IsoDate;
   currentLog: DailyLog | null;
@@ -162,6 +174,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updatedAt: nowIsoTimestamp(),
   });
   const [foods, setFoods] = useState<Food[]>([]);
+  const [foodUsage, setFoodUsage] = useState<Record<string, number>>({});
+  const [recentFoodIds, setRecentFoodIds] = useState<string[]>(
+    loadRecentFoodIds,
+  );
   const [selectedDate, setSelectedDate] = useState<DailyLog['date']>(
     getTodayIso(),
   );
@@ -188,6 +204,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setStorageInfo(info);
     } catch {
       // Storage status is informational and never blocks the diary.
+    }
+  }, []);
+
+  const refreshFoodUsage = useCallback(async () => {
+    try {
+      setFoodUsage(await repository.getFoodUsage());
+    } catch {
+      // Batch remaining amounts are informational; the diary still works.
     }
   }, []);
 
@@ -230,12 +254,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async function initialize() {
       try {
         await repository.initialize();
-        const [storedProfile, storedSettings, storedFoods] =
+        const [storedProfile, storedSettings, storedFoods, storedUsage] =
           await Promise.all([
             repository.getProfile(),
             repository.getTargetSettings(),
             repository.listFoods(),
+            repository.getFoodUsage(),
           ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        const storedTargets = resolveTargets(storedProfile, storedSettings);
+        if (storedTargets) {
+          await repository.backfillDailyLogSnapshots(
+            storedTargets,
+            storedProfile?.weightKg ?? null,
+          );
+        }
 
         if (cancelled) {
           return;
@@ -244,6 +281,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setProfile(storedProfile);
         setTargetSettings(storedSettings);
         setFoods(sortFoods(storedFoods));
+        setFoodUsage(storedUsage);
         setStatus('ready');
         void refreshStorageInfo();
       } catch (error) {
@@ -310,7 +348,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const summary = useMemo(
-    () => buildDaySummary(currentLog, targets),
+    () =>
+      buildDaySummary(
+        currentLog,
+        currentLog?.targetSnapshot ?? targets,
+      ),
     [currentLog, targets],
   );
 
@@ -336,7 +378,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       try {
         const next = update(log);
-        const saved = await repository.saveDailyLog(next);
+        const withSnapshots: DailyLog = {
+          ...next,
+          targetSnapshot: next.targetSnapshot ?? targets,
+          weightKgSnapshot:
+            next.weightKgSnapshot ?? profile?.weightKg ?? null,
+        };
+        const saved = await repository.saveDailyLog(withSnapshots);
 
         if (selectedDateRef.current === saved.date) {
           currentLogRef.current = saved;
@@ -348,6 +396,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           showToast(successMessage);
         }
 
+        void refreshFoodUsage();
         return true;
       } catch (error) {
         if (error instanceof StaleWriteError) {
@@ -370,7 +419,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsSaving(false);
       }
     },
-    [showToast],
+    [profile?.weightKg, refreshFoodUsage, showToast, targets],
   );
 
   const completeOnboarding = useCallback(
@@ -403,6 +452,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [showToast],
   );
 
+  const syncTodayTargetSnapshot = useCallback(
+    async (target: Nutrition | null, weightKg: number | null) => {
+      if (!target) {
+        return;
+      }
+      const today = getTodayIso();
+      await repository.updateDailyLogSnapshot(today, target, weightKg);
+      if (currentLogRef.current?.date === today) {
+        const updated: DailyLog = {
+          ...currentLogRef.current,
+          targetSnapshot: { ...target },
+          weightKgSnapshot: weightKg,
+        };
+        currentLogRef.current = updated;
+        setCurrentLog(updated);
+      }
+    },
+    [],
+  );
+
   const saveProfile = useCallback(
     async (input: ProfileInput): Promise<boolean> => {
       try {
@@ -410,8 +479,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ...input,
           updatedAt: nowIsoTimestamp(),
         }) as UserProfile;
+        if (targets) {
+          await repository.backfillDailyLogSnapshots(
+            targets,
+            profile?.weightKg ?? null,
+          );
+        }
         const saved = await repository.saveProfile(nextProfile);
         setProfile(saved);
+        await syncTodayTargetSnapshot(
+          resolveTargets(saved, targetSettings),
+          saved.weightKg,
+        );
         showToast(translate('toast.profileUpdated'));
         return true;
       } catch (error) {
@@ -419,7 +498,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return false;
       }
     },
-    [showToast],
+    [
+      profile?.weightKg,
+      showToast,
+      syncTodayTargetSnapshot,
+      targetSettings,
+      targets,
+    ],
   );
 
   const saveTargetSettings = useCallback(
@@ -429,8 +514,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ...input,
           updatedAt: nowIsoTimestamp(),
         }) as TargetSettings;
+        if (targets) {
+          await repository.backfillDailyLogSnapshots(
+            targets,
+            profile?.weightKg ?? null,
+          );
+        }
         const saved = await repository.saveTargetSettings(nextSettings);
         setTargetSettings(saved);
+        await syncTodayTargetSnapshot(
+          resolveTargets(profile, saved),
+          profile?.weightKg ?? null,
+        );
         showToast(
           saved.mode === 'manual'
             ? translate('toast.manualTargetSaved')
@@ -442,7 +537,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return false;
       }
     },
-    [showToast],
+    [
+      profile,
+      profile?.weightKg,
+      showToast,
+      syncTodayTargetSnapshot,
+      targets,
+    ],
   );
 
   const addEntry = useCallback(
@@ -452,14 +553,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
       amount: EntryAmountInput,
     ): Promise<boolean> => {
       const entry = createFoodEntry(food, amount);
-      return persistLogUpdate(
+      const ok = await persistLogUpdate(
         (log) => addEntryToMeal(log, mealType, entry),
         translate('toast.mealAdded', {
           meal: translate(MEAL_META[mealType].labelKey),
         }),
       );
+      if (ok && foods.some((item) => item.id === food.id)) {
+        setRecentFoodIds((current) =>
+          rememberRecentFoodId(current, food.id),
+        );
+      }
+      return ok;
     },
-    [persistLogUpdate],
+    [foods, persistLogUpdate],
   );
 
   const updateEntry = useCallback(
@@ -482,6 +589,52 @@ export function AppProvider({ children }: { children: ReactNode }) {
         translate('toast.entryDeleted'),
       ),
     [persistLogUpdate],
+  );
+
+  const createMealPrepBatch = useCallback(
+    async (
+      sourceFood: Food,
+      totalGrams: number,
+      portionGrams: number,
+    ): Promise<Food> => {
+      const now = nowIsoTimestamp();
+      const batchName = translate('batch.foodName', {
+        name: getFoodDisplayName(sourceFood, getCurrentLocale()),
+      });
+      const nextFood = foodSchema.parse({
+        ...sourceFood,
+        id: createId('food'),
+        names: {
+          ...sourceFood.names,
+          'zh-CN': batchName,
+        },
+        servings: [
+          {
+            id: createId('serving'),
+            label: translate('batch.portionLabel'),
+            grams: portionGrams,
+          },
+        ],
+        batch: {
+          totalGrams,
+          portionGrams,
+          sourceFoodId: sourceFood.id,
+        },
+        source: 'custom',
+        createdAt: now,
+        updatedAt: now,
+      }) as Food;
+
+      try {
+        const saved = await repository.saveFood(nextFood);
+        setFoods((current) => sortFoods([...current, saved]));
+        showToast(translate('toast.batchCreated'));
+        return saved;
+      } catch (error) {
+        throw new Error(errorMessage(error));
+      }
+    },
+    [showToast],
   );
 
   const createFood = useCallback(
@@ -631,16 +784,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       try {
         const result = await repository.importBackup(payload);
-        const [storedProfile, storedSettings, storedFoods] =
+        const [storedProfile, storedSettings, storedFoods, storedUsage] =
           await Promise.all([
             repository.getProfile(),
             repository.getTargetSettings(),
             repository.listFoods(),
+            repository.getFoodUsage(),
           ]);
+        const storedTargets = resolveTargets(storedProfile, storedSettings);
+        if (storedTargets) {
+          await repository.backfillDailyLogSnapshots(
+            storedTargets,
+            storedProfile?.weightKg ?? null,
+          );
+        }
 
         setProfile(storedProfile);
         setTargetSettings(storedSettings);
         setFoods(sortFoods(storedFoods));
+        setFoodUsage(storedUsage);
         setLogReloadToken((value) => value + 1);
         void refreshStorageInfo();
         return result;
@@ -697,6 +859,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     try {
       await repository.resetAllData();
+      clearRecentFoodIds();
       window.location.reload();
       return true;
     } catch (error) {
@@ -713,6 +876,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addEntry,
       updateEntry,
       deleteEntry,
+      createMealPrepBatch,
       createFood,
       updateFood,
       deleteFood,
@@ -733,6 +897,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addEntry,
       updateEntry,
       deleteEntry,
+      createMealPrepBatch,
       createFood,
       updateFood,
       deleteFood,
@@ -755,6 +920,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       profile,
       targetSettings,
       foods,
+      recentFoodIds,
+      foodUsage,
       targets,
       selectedDate,
       currentLog,
@@ -772,6 +939,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       profile,
       targetSettings,
       foods,
+      recentFoodIds,
+      foodUsage,
       targets,
       selectedDate,
       currentLog,

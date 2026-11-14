@@ -103,6 +103,7 @@ function makeImportedFood(
       label: serving.label.trim(),
       grams: serving.grams,
     })),
+    ...(incoming.batch ? { batch: { ...incoming.batch } } : {}),
     source: 'imported',
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
@@ -147,6 +148,7 @@ export function buildFoodExportPayload(foods: Food[]): {
         label: serving.label,
         grams: serving.grams,
       })),
+      ...(food.batch ? { batch: { ...food.batch } } : {}),
     })),
   };
 }

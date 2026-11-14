@@ -28,6 +28,8 @@ export function createEmptyDailyLog(date: string): DailyLog {
       snack: [],
     },
     revision: 0,
+    targetSnapshot: null,
+    weightKgSnapshot: null,
     createdAt: now,
     updatedAt: now,
   };

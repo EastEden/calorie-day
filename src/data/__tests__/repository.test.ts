@@ -310,6 +310,79 @@ describe('IndexedDbRepository', () => {
     expect(await repo.listDailyLogs()).toHaveLength(3);
   });
 
+  it('backfills log target and weight snapshots only when missing', async () => {
+    dbName = `calorie-test-snapshots-${Date.now()}-${Math.random()}`;
+    const repo = createRepository();
+    await repo.initialize();
+    await repo.saveDailyLog(makeLog('2026-11-10'));
+    await repo.saveDailyLog(makeLog('2026-11-11'));
+
+    const target = {
+      kcal: 1800,
+      proteinG: 100,
+      carbsG: 200,
+      fatG: 60,
+    };
+    await repo.backfillDailyLogSnapshots(target, 58);
+
+    const first = await repo.getDailyLog('2026-11-10');
+    expect(first?.targetSnapshot).toEqual(target);
+    expect(first?.weightKgSnapshot).toBe(58);
+
+    const customTarget = {
+      kcal: 2000,
+      proteinG: 110,
+      carbsG: 220,
+      fatG: 65,
+    };
+    const customLog = makeLog('2026-11-12');
+    customLog.targetSnapshot = customTarget;
+    customLog.weightKgSnapshot = 60;
+    await repo.saveDailyLog(customLog);
+    await repo.backfillDailyLogSnapshots(target, 58);
+
+    const preserved = await repo.getDailyLog('2026-11-12');
+    expect(preserved?.targetSnapshot).toEqual(customTarget);
+    expect(preserved?.weightKgSnapshot).toBe(60);
+
+    await repo.updateDailyLogSnapshot('2026-11-10', customTarget, 60);
+    const updatedToday = await repo.getDailyLog('2026-11-10');
+    expect(updatedToday?.targetSnapshot).toEqual(customTarget);
+    expect(updatedToday?.weightKgSnapshot).toBe(60);
+  });
+
+  it('sums consumed grams for a batch food across daily logs', async () => {
+    dbName = `calorie-test-food-usage-${Date.now()}-${Math.random()}`;
+    const repo = createRepository();
+    await repo.initialize();
+    const batchFood: Food = {
+      ...SEED_FOODS[0]!,
+      id: 'batch-food',
+      names: { 'zh-CN': '备餐测试' },
+      batch: { totalGrams: 1000, portionGrams: 250 },
+    };
+    await repo.saveFood(batchFood);
+
+    for (const [date, grams] of [
+      ['2026-11-10', 200],
+      ['2026-11-11', 300],
+    ] as const) {
+      const log = makeLog(date);
+      log.meals.lunch.push(
+        createFoodEntry(batchFood, {
+          grams,
+          enteredQuantity: grams,
+          enteredUnit: 'g',
+        }),
+      );
+      await repo.saveDailyLog(log);
+    }
+
+    expect(await repo.getFoodUsage()).toMatchObject({
+      'batch-food': 500,
+    });
+  });
+
   it('imports missing profile, settings, foods and logs from a backup', async () => {
     dbName = `calorie-test-backup-fill-${Date.now()}-${Math.random()}`;
     const repo = createRepository();

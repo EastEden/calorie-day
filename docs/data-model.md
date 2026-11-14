@@ -47,6 +47,11 @@ interface Food {
   basis: FoodBasis;
   nutritionPer100g: Nutrition;
   servings: { id: string; label: string; grams: number }[];
+  batch?: {
+    totalGrams: number;
+    portionGrams: number;
+    sourceFoodId?: string;
+  };
   source: 'builtin' | 'custom' | 'imported';
   createdAt: string; // ISO timestamp
   updatedAt: string;
@@ -71,6 +76,8 @@ interface DailyLog {
   date: IsoDate;
   meals: Record<MealType, FoodEntry[]>;
   revision: number;
+  targetSnapshot?: Nutrition | null;
+  weightKgSnapshot?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -142,17 +149,38 @@ interface TargetSettings {
 `date` 使用设备本地日历的 `YYYY-MM-DD`，不通过 UTC 转换生成，避免跨时区/午夜时
 记录落到前一天或后一天。
 
-### 4.4 目标不写入每日记录
+### 4.4 每日记录保存目标和体重快照
 
-第一版历史日期统一用当前推荐目标对比。这样修改身体资料后，所有日期的目标同步更新。
-未来如果加入趋势和“目标历史”，可以新增按生效日期版本化的目标表，而不修改日志结构。
+`DailyLog` 在首次写入时保存当天的 `targetSnapshot` 和 `weightKgSnapshot`。历史摘要使用
+日志自己的快照，而不是当前身体资料。修改体重、活动量或手动目标后，过去的日期保持原目标；
+当天已有日志会同步到新目标，没有记录的新日期则使用当前目标。
 
-### 4.5 修订号
+启动时会为旧日志补齐缺失的快照（使用当时的当前目标），保存资料/目标前也会先冻结已有
+日志，再单独刷新当天快照。这样既隔离历史体重变化，又能兼容旧数据。
+
+### 4.5 大份菜备餐
+
+备餐不是单独的表，而是一个带 `batch` 元数据的自定义 `Food`：
+
+- `totalGrams`：整道菜的总重量。
+- `portionGrams`：默认一份的重量。
+- `sourceFoodId`：来源于哪个食物（可选）。
+- 剩余量 = `totalGrams - sum(该 foodId 的所有 FoodEntry.amountGrams)`。
+
+这样删除或修改某次记录会自动反映到剩余量，不需要维护额外的库存字段。备餐食物仍可
+在食物库编辑或删除；删除备餐不会删除已经记录的饮食快照。
+
+### 4.6 最近选择
+
+最近使用过的食物 ID 存在浏览器 `localStorage`，最多保留 8 个。选择界面按最近使用顺序
+置顶，并显示“最近”标记。它属于本机 UI 偏好，不进入业务备份。
+
+### 4.7 修订号
 
 `DailyLog.revision` 从 0 开始。保存时先读取已有记录，若版本不一致则拒绝写入并提示刷新。
 IndexedDB 事务在读取、比较、写入、提交之间提供原子性，避免多标签页静默覆盖。
 
-### 4.6 写入后再反馈
+### 4.8 写入后再反馈
 
 UI 不会先把操作视为成功。Repository 的 Promise 只在事务完成后 resolve；之后界面才更新并
 显示“已保存”。写入失败时保留编辑内容，提示重试。
@@ -176,7 +204,12 @@ interface CalorieRepository {
   deleteFood(foodId: string): Promise<void>;
   getDailyLog(date: string): Promise<DailyLog | null>;
   listDailyLogs(fromDate?: string, toDate?: string): Promise<DailyLog[]>;
+  getFoodUsage(): Promise<Record<string, number>>;
   saveDailyLog(log: DailyLog): Promise<DailyLog>;
+  backfillDailyLogSnapshots(
+    target: Nutrition,
+    weightKg: number | null,
+  ): Promise<void>;
   importBackup(payload: BackupPayload): Promise<BackupImportResult>;
 }
 ```
@@ -283,6 +316,7 @@ TDEE = BMR × 活动系数
 
 - 全量备份导入采用安全合并，不提供覆盖同日期记录或在已安装设备上完整替换的选项。
 - 多标签页对食物库的编辑没有 revision 冲突保护；每日记录有。
-- 历史目标版本化尚未实现。
+- 备餐创建后暂不支持直接修改总重量/每份重量，需要删除后重新创建。
+- 最近食物只保存在本机 localStorage，不参与跨设备同步。
 - 食物名称编辑界面目前只编辑 `zh-CN`；导入的其他语言名称会保留，但还没有逐语言编辑 UI。
 - 份量名称（如“个”“杯”）仍是单语言字符串，尚未纳入名称映射。

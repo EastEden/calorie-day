@@ -42,7 +42,7 @@ export function AddFoodModal({
   mealType,
   onClose,
 }: AddFoodModalProps) {
-  const { foods, actions, isSaving } = useApp();
+  const { foods, recentFoodIds, actions, isSaving } = useApp();
   const { t, locale } = useI18n();
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
   const [search, setSearch] = useState('');
@@ -57,23 +57,43 @@ export function AddFoodModal({
     setCategory('all');
   }, [open, mealType]);
 
+  const recentRanks = useMemo(
+    () => new Map(recentFoodIds.map((foodId, index) => [foodId, index])),
+    [recentFoodIds],
+  );
+
   const filteredFoods = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase(locale);
-    return foods.filter((food) => {
-      if (category !== 'all' && food.category !== category) {
-        return false;
-      }
-      if (!normalizedSearch) {
-        return true;
-      }
-      return (
-        getFoodSearchText(food)
-          .toLocaleLowerCase(locale)
-          .includes(normalizedSearch) ||
-        t(FOOD_CATEGORY_LABEL_KEYS[food.category]).includes(normalizedSearch)
-      );
-    });
-  }, [category, foods, locale, search, t]);
+    return foods
+      .filter((food) => {
+        if (category !== 'all' && food.category !== category) {
+          return false;
+        }
+        if (!normalizedSearch) {
+          return true;
+        }
+        return (
+          getFoodSearchText(food)
+            .toLocaleLowerCase(locale)
+            .includes(normalizedSearch) ||
+          t(FOOD_CATEGORY_LABEL_KEYS[food.category]).includes(normalizedSearch)
+        );
+      })
+      .sort((a, b) => {
+        const rankA = recentRanks.get(a.id);
+        const rankB = recentRanks.get(b.id);
+        if (rankA === undefined && rankB === undefined) {
+          return 0;
+        }
+        if (rankA === undefined) {
+          return 1;
+        }
+        if (rankB === undefined) {
+          return -1;
+        }
+        return rankA - rankB;
+      });
+  }, [category, foods, locale, recentRanks, search, t]);
 
   const handleClose = () => {
     if (!isSaving) {
@@ -161,7 +181,19 @@ export function AddFoodModal({
                     {categoryLabel.slice(0, 1)}
                   </span>
                   <span className="food-pick-row__main">
-                    <strong>{getFoodDisplayName(food, locale)}</strong>
+                    <strong>
+                      {getFoodDisplayName(food, locale)}
+                      {recentRanks.has(food.id) && (
+                        <span className="food-pick-row__recent">
+                          {t('addFood.recent')}
+                        </span>
+                      )}
+                      {food.batch && (
+                        <span className="food-pick-row__batch">
+                          {t('batch.eyebrow')}
+                        </span>
+                      )}
+                    </strong>
                     <small>
                       {categoryLabel} ·{' '}
                       {t(FOOD_BASIS_LABEL_KEYS[food.basis])}

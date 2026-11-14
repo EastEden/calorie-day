@@ -99,6 +99,28 @@
         }
       }
     },
+    "batch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["totalGrams", "portionGrams"],
+      "properties": {
+        "totalGrams": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100000
+        },
+        "portionGrams": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100000
+        },
+        "sourceFoodId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        }
+      }
+    },
     "food": {
       "type": "object",
       "additionalProperties": false,
@@ -139,6 +161,9 @@
           "items": {
             "$ref": "#/definitions/serving"
           }
+        },
+        "batch": {
+          "$ref": "#/definitions/batch"
         }
       }
     }

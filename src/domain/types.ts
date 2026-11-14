@@ -55,6 +55,12 @@ export type LocalizedText = Record<string, string> & {
   'zh-CN': string;
 };
 
+export interface MealPrepBatchMeta {
+  totalGrams: number;
+  portionGrams: number;
+  sourceFoodId?: string;
+}
+
 export interface Food {
   id: string;
   names: LocalizedText;
@@ -62,6 +68,12 @@ export interface Food {
   basis: FoodBasis;
   nutritionPer100g: Nutrition;
   servings: ServingOption[];
+  /**
+   * Optional batch metadata. A food with this field represents a large dish
+   * cooked once and eaten over several meals. Remaining grams are derived from
+   * all logged entries for the food, so editing/deleting entries stays exact.
+   */
+  batch?: MealPrepBatchMeta;
   source: FoodSource;
   createdAt: string;
   updatedAt: string;
@@ -90,6 +102,12 @@ export interface DailyLog {
   date: IsoDate;
   meals: Record<MealType, FoodEntry[]>;
   revision: number;
+  /**
+   * Frozen target and profile weight at the time the day was first written.
+   * Historical days keep these snapshots when the current weight changes.
+   */
+  targetSnapshot?: Nutrition | null;
+  weightKgSnapshot?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -200,4 +218,5 @@ export interface ImportedFoodInput {
     label: string;
     grams: number;
   }[];
+  batch?: MealPrepBatchMeta;
 }

@@ -114,6 +114,33 @@ describe('food import schema', () => {
     expect(result.success).toBe(false);
   });
 
+  it('validates batch metadata and rejects a portion larger than the total', () => {
+    const base = {
+      id: 'batch-food',
+      names: { 'zh-CN': '测试备餐' },
+      category: 'other',
+      basis: 'raw',
+      nutritionPer100g: nutrition,
+      servings: [],
+      source: 'custom',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    };
+
+    expect(
+      foodSchema.safeParse({
+        ...base,
+        batch: { totalGrams: 1000, portionGrams: 250 },
+      }).success,
+    ).toBe(true);
+    expect(
+      foodSchema.safeParse({
+        ...base,
+        batch: { totalGrams: 200, portionGrams: 250 },
+      }).success,
+    ).toBe(false);
+  });
+
   it('rejects malformed JSON', () => {
     const result = parseFoodImportJson('{ not valid');
     expect(result.success).toBe(false);
