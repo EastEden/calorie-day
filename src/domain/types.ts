@@ -59,6 +59,7 @@ export interface MealPrepBatchMeta {
   totalGrams: number;
   portionGrams: number;
   sourceFoodId?: string;
+  disposedAt?: string;
 }
 
 export interface Food {

@@ -51,6 +51,7 @@ interface Food {
     totalGrams: number;
     portionGrams: number;
     sourceFoodId?: string;
+    disposedAt?: string;
   };
   source: 'builtin' | 'custom' | 'imported';
   createdAt: string; // ISO timestamp
@@ -165,9 +166,13 @@ interface TargetSettings {
 - `totalGrams`：整道菜的总重量。
 - `portionGrams`：默认一份的重量。
 - `sourceFoodId`：来源于哪个食物（可选）。
+- `disposedAt`：剩余部分被丢弃的时间；存在时剩余量视为 0，不计入摄入。
 - 剩余量 = `totalGrams - sum(该 foodId 的所有 FoodEntry.amountGrams)`。
 
-这样删除或修改某次记录会自动反映到剩余量，不需要维护额外的库存字段。备餐食物仍可
+备餐是全局数据，不绑定某一天。记录时可以单独选择日期和餐次，因此支持“今晚做好、
+明早吃”的跨天安排。未来日期的记录在当天到达后进入日记。
+
+删除或修改某次记录会自动反映到剩余量，不需要维护额外的库存字段。备餐食物仍可
 在食物库编辑或删除；删除备餐不会删除已经记录的饮食快照。
 
 ### 4.6 最近选择

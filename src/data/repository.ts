@@ -1,6 +1,6 @@
 import type { z } from 'zod';
 import { backupPayloadSchema } from '../domain/backup';
-import { nowIsoTimestamp } from '../domain/dates';
+import { getTodayIso, nowIsoTimestamp } from '../domain/dates';
 import {
   dailyLogSchema,
   foodSchema,
@@ -580,6 +580,14 @@ export class IndexedDbRepository implements CalorieRepository {
       }
 
       const log = cursor.value;
+      if (
+        isRecord(log) &&
+        typeof log.date === 'string' &&
+        log.date > getTodayIso()
+      ) {
+        cursor.continue();
+        return;
+      }
       if (isRecord(log)) {
         const needsTarget =
           log.targetSnapshot === undefined || log.targetSnapshot === null;

@@ -71,6 +71,8 @@ export function DiaryPage({ onShare }: DiaryPageProps) {
 
   return (
     <div className="diary-page page-width">
+      {contentReady && <MealPrepSection />}
+
       <DayToolbar />
 
       {isLogLoading && <DiarySkeleton />}
@@ -108,8 +110,6 @@ export function DiaryPage({ onShare }: DiaryPageProps) {
           </div>
 
           <MacroOverview summary={summary} />
-
-          <MealPrepSection />
 
           <section className="meals-section" aria-labelledby="meals-title">
             <div className="section-heading">

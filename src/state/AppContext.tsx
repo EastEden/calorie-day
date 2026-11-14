@@ -21,6 +21,7 @@ import {
 } from '../domain/constants';
 import { getCurrentLocale, translate } from '../i18n';
 import {
+  formatShortDate,
   getTodayIso,
   isFutureDate,
   isValidIsoDate,
@@ -86,6 +87,13 @@ interface AppActions {
     food: Food,
     amount: EntryAmountInput,
   ) => Promise<boolean>;
+  addEntryForDate: (
+    date: IsoDate,
+    mealType: MealType,
+    food: Food,
+    amount: EntryAmountInput,
+  ) => Promise<boolean>;
+  disposeMealPrepBatch: (batch: Food) => Promise<void>;
   updateEntry: (
     mealType: MealType,
     entryId: string,
@@ -569,6 +577,116 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [foods, persistLogUpdate],
   );
 
+  const addEntryForDate = useCallback(
+    async (
+      date: IsoDate,
+      mealType: MealType,
+      food: Food,
+      amount: EntryAmountInput,
+    ): Promise<boolean> => {
+      if (!isValidIsoDate(date)) {
+        showToast(translate('toast.dateInvalid'), 'error');
+        return false;
+      }
+      if (savingRef.current) {
+        showToast(translate('toast.savingWait'), 'info');
+        return false;
+      }
+
+      savingRef.current = true;
+      setIsSaving(true);
+
+      try {
+        const existing = await repository.getDailyLog(date);
+        const log = existing ?? createEmptyDailyLog(date);
+        const entry = createFoodEntry(food, amount);
+        const next = addEntryToMeal(log, mealType, entry);
+        const isFuture = date > getTodayIso();
+        const saved = await repository.saveDailyLog({
+          ...next,
+          // A planned future meal should use the target in effect when that
+          // day actually arrives, not the target at planning time.
+          targetSnapshot: isFuture
+            ? null
+            : next.targetSnapshot ?? targets,
+          weightKgSnapshot: isFuture
+            ? null
+            : next.weightKgSnapshot ?? profile?.weightKg ?? null,
+        });
+
+        if (selectedDateRef.current === saved.date) {
+          currentLogRef.current = saved;
+          setCurrentLog(saved);
+          setLastSavedAt(Date.now());
+        }
+
+        if (foods.some((item) => item.id === food.id)) {
+          setRecentFoodIds((current) =>
+            rememberRecentFoodId(current, food.id),
+          );
+        }
+
+        showToast(
+          translate('toast.mealAddedForDate', {
+            date: formatShortDate(saved.date),
+            meal: translate(MEAL_META[mealType].labelKey),
+          }),
+        );
+        void refreshFoodUsage();
+        return true;
+      } catch (error) {
+        if (error instanceof StaleWriteError) {
+          showToast(translate('toast.recordChanged'), 'error');
+        } else {
+          showToast(errorMessage(error), 'error');
+        }
+        return false;
+      } finally {
+        savingRef.current = false;
+        setIsSaving(false);
+      }
+    },
+    [
+      foods,
+      profile?.weightKg,
+      refreshFoodUsage,
+      showToast,
+      targets,
+    ],
+  );
+
+  const disposeMealPrepBatch = useCallback(
+    async (batch: Food): Promise<void> => {
+      if (!batch.batch) {
+        return;
+      }
+      const now = nowIsoTimestamp();
+      const nextFood = foodSchema.parse({
+        ...batch,
+        batch: {
+          ...batch.batch,
+          disposedAt: now,
+        },
+        updatedAt: now,
+      }) as Food;
+
+      try {
+        const saved = await repository.saveFood(nextFood);
+        setFoods((current) =>
+          sortFoods(
+            current.map((food) =>
+              food.id === saved.id ? saved : food,
+            ),
+          ),
+        );
+        showToast(translate('toast.batchDisposed'));
+      } catch (error) {
+        throw new Error(errorMessage(error));
+      }
+    },
+    [showToast],
+  );
+
   const updateEntry = useCallback(
     async (
       mealType: MealType,
@@ -874,6 +992,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveProfile,
       saveTargetSettings,
       addEntry,
+      addEntryForDate,
+      disposeMealPrepBatch,
       updateEntry,
       deleteEntry,
       createMealPrepBatch,
@@ -895,6 +1015,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveProfile,
       saveTargetSettings,
       addEntry,
+      addEntryForDate,
+      disposeMealPrepBatch,
       updateEntry,
       deleteEntry,
       createMealPrepBatch,

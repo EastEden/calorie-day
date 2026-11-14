@@ -349,6 +349,13 @@ describe('IndexedDbRepository', () => {
     const updatedToday = await repo.getDailyLog('2026-11-10');
     expect(updatedToday?.targetSnapshot).toEqual(customTarget);
     expect(updatedToday?.weightKgSnapshot).toBe(60);
+
+    const futureLog = makeLog('2999-01-01');
+    await repo.saveDailyLog(futureLog);
+    await repo.backfillDailyLogSnapshots(target, 58);
+    const future = await repo.getDailyLog('2999-01-01');
+    expect(future?.targetSnapshot).toBeNull();
+    expect(future?.weightKgSnapshot).toBeNull();
   });
 
   it('sums consumed grams for a batch food across daily logs', async () => {

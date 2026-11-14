@@ -109,6 +109,7 @@ export const mealPrepBatchMetaSchema = z
     totalGrams: finiteNumber.positive().max(100_000),
     portionGrams: finiteNumber.positive().max(100_000),
     sourceFoodId: z.string().min(1).max(120).optional(),
+    disposedAt: timestampSchema.optional(),
   })
   .refine((value) => value.portionGrams <= value.totalGrams, {
     message: '每份重量不能超过总重量',

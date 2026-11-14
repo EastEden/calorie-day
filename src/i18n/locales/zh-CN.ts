@@ -257,9 +257,23 @@ export const zhCN = {
 
   // Meal prep batches
   'batch.eyebrow': '备餐',
-  'batch.title': '大份菜分次记录',
+  'batch.title': '备餐',
+  'batch.globalEyebrow': '全局',
   'batch.description':
-    '把一锅菜分成多份，按实际吃的量记录；剩余量会自动计算。',
+    '全局记录，不绑定日期；可以把大份菜分到任意一天、任意餐次，剩余量会自动计算。',
+  'batch.barTitle': '备餐',
+  'batch.barActive': '全局 · {{n}} 个进行中',
+  'batch.barEmpty': '全局 · 大份菜可以分多次吃',
+  'batch.barNoActive': '全局 · 暂无进行中的备餐',
+  'batch.open': '查看',
+  'batch.collapse': '收起',
+  'batch.date': '记录日期',
+  'batch.dateHintToday': '默认为今天；也可以安排到未来几天。',
+  'batch.dateHintOther': '将记录到 {{date}}。',
+  'batch.dispose': '丢弃剩余',
+  'batch.disposeConfirm':
+    '丢弃剩余部分？丢弃不会计入热量摄入，也不能恢复。',
+  'batch.disposed': '已丢弃',
   'batch.create': '新建备餐',
   'batch.createTitle': '新建备餐',
   'batch.createDescription':
@@ -294,6 +308,9 @@ export const zhCN = {
     '做了大份菜时，可以先创建一个备餐，再分多次记录。',
   'toast.batchCreated': '备餐已创建。',
   'toast.batchDeleted': '备餐已删除。',
+  'toast.batchDisposed': '剩余已丢弃，不计入摄入。',
+  'toast.mealAddedForDate': '已加入{{date}} {{meal}}',
+  'toast.recordChanged': '记录已在其他页面更新，请刷新后重试。',
 
   // Entry editor
   'entry.title': '编辑记录',

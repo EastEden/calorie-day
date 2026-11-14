@@ -1,4 +1,9 @@
 import { useEffect, useState } from 'react';
+import {
+  addDays,
+  formatShortDate,
+  getTodayIso,
+} from '../../domain/dates';
 import { formatDecimal } from '../../domain/formatters';
 import { getFoodDisplayName } from '../../domain/localizedText';
 import type { Food, MealType } from '../../domain/types';
@@ -36,6 +41,8 @@ export function BatchPortionModal({
 }: BatchPortionModalProps) {
   const { t, locale } = useI18n();
   const { foodUsage, actions, isSaving } = useApp();
+  const today = getTodayIso();
+  const [date, setDate] = useState(today);
   const [mealType, setMealType] = useState<MealType>(getSuggestedMeal);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
@@ -48,6 +55,7 @@ export function BatchPortionModal({
 
   useEffect(() => {
     if (open) {
+      setDate(getTodayIso());
       setMealType(getSuggestedMeal());
       setSubmitError(null);
     }
@@ -80,6 +88,29 @@ export function BatchPortionModal({
       }
     >
       <div className="meal-prep-portion">
+        <label className="field">
+          <span className="field-label">{t('batch.date')}</span>
+          <input
+            type="date"
+            value={date}
+            min={addDays(today, -365)}
+            max={addDays(today, 7)}
+            onChange={(event) => {
+              if (event.target.value) {
+                setDate(event.target.value);
+              }
+            }}
+            disabled={isBusy}
+          />
+          <span className="field-hint">
+            {date === today
+              ? t('batch.dateHintToday')
+              : t('batch.dateHintOther', {
+                  date: formatShortDate(date),
+                })}
+          </span>
+        </label>
+
         <div className="field">
           <span className="field-label">{t('batch.meal')}</span>
           <div
@@ -128,7 +159,12 @@ export function BatchPortionModal({
                   return false;
                 }
                 setSubmitError(null);
-                const ok = await actions.addEntry(mealType, batch, amount);
+                const ok = await actions.addEntryForDate(
+                  date,
+                  mealType,
+                  batch,
+                  amount,
+                );
                 if (ok) {
                   onClose();
                 }
