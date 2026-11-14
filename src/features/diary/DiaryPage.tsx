@@ -12,6 +12,7 @@ import { DayToolbar } from './DayToolbar';
 import { EntryEditorModal } from './EntryEditorModal';
 import { MacroOverview } from './MacroOverview';
 import { MealCard } from './MealCard';
+import { MealPrepSection } from './MealPrepSection';
 import { QuickCoffeeModal } from './QuickCoffeeModal';
 import { QuickOilModal } from './QuickOilModal';
 
@@ -118,6 +119,8 @@ export function DiaryPage({ onShare }: DiaryPageProps) {
                 {t('diary.recordsCount', { n: summary.entryCount })}
               </span>
             </div>
+
+            <MealPrepSection />
 
             <div className="meal-list">
               {MEAL_TYPES.map((mealType) => (

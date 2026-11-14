@@ -12,8 +12,12 @@ import {
 } from '../../domain/formatters';
 import { formatLongDate, isToday } from '../../domain/dates';
 import { getEntryNutrition } from '../../domain/nutrition';
-import { getEntryDisplayName } from '../../domain/localizedText';
+import {
+  getEntryDisplayName,
+  resolveLocalizedText,
+} from '../../domain/localizedText';
 import { useI18n } from '../../i18n';
+import { useApp } from '../../state/AppContext';
 import { MACRO_COLORS } from '../../ui/MacroDonut';
 import { MealIcon } from '../../ui/MealIcon';
 
@@ -42,9 +46,25 @@ function ShareMeal({
   entries: FoodEntry[];
 }) {
   const { t, locale } = useI18n();
+  const { foods } = useApp();
   const meta = MEAL_META[mealType];
   const mealSummary = summary.byMeal[mealType];
   const gramUnit = t('common.gram');
+
+  const getComponentList = (entry: FoodEntry): string | null => {
+    const components =
+      entry.batchComponents ??
+      foods.find((food) => food.id === entry.foodId)?.batch
+        ?.components;
+    if (!components || components.length === 0) {
+      return null;
+    }
+    return components
+      .map((component) =>
+        resolveLocalizedText(component.names, locale),
+      )
+      .join('、');
+  };
 
   return (
     <section className="share-meal">
@@ -79,10 +99,17 @@ function ShareMeal({
             </span>
           </div>
           <div className="share-meal__entries">
-            {entries.map((entry) => (
+            {entries.map((entry) => {
+              const componentList = getComponentList(entry);
+              return (
               <div className="share-entry" key={entry.id}>
                 <span className="share-entry__name">
                   {getEntryDisplayName(entry, locale)}
+                  {componentList && (
+                    <small className="share-entry__components">
+                      （{componentList}）
+                    </small>
+                  )}
                 </span>
                 <span className="share-entry__amount">
                   {formatShareAmount(entry, gramUnit)}
@@ -92,7 +119,8 @@ function ShareMeal({
                   <small> {t('common.kcal')}</small>
                 </strong>
               </div>
-            ))}
+              );
+            })}
           </div>
         </>
       ) : (

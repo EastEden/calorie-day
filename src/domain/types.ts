@@ -55,6 +55,28 @@ export type LocalizedText = Record<string, string> & {
   'zh-CN': string;
 };
 
+export interface MealPrepBatchComponent {
+  foodId?: string;
+  names: LocalizedText;
+  totalGrams: number;
+  nutritionPer100g: Nutrition;
+}
+
+export interface MealPrepBatchMeta {
+  totalGrams: number;
+  portionGrams: number;
+  portions?: number;
+  components?: MealPrepBatchComponent[];
+  sourceFoodId?: string;
+  disposedAt?: string;
+}
+
+export interface MealPrepBatchInput {
+  name: string;
+  components: { food: Food; grams: number }[];
+  portions: number;
+}
+
 export interface Food {
   id: string;
   names: LocalizedText;
@@ -62,9 +84,20 @@ export interface Food {
   basis: FoodBasis;
   nutritionPer100g: Nutrition;
   servings: ServingOption[];
+  /**
+   * Optional batch metadata. A food with this field represents a large dish
+   * cooked once and eaten over several meals. Remaining grams are derived from
+   * all logged entries for the food, so editing/deleting entries stays exact.
+   */
+  batch?: MealPrepBatchMeta;
   source: FoodSource;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface FoodEntryBatchComponent {
+  names: LocalizedText;
+  totalGrams: number;
 }
 
 export interface FoodEntry {
@@ -75,6 +108,7 @@ export interface FoodEntry {
    * This keeps historical entries stable when the food library changes.
    */
   foodNames: LocalizedText;
+  batchComponents?: FoodEntryBatchComponent[];
   amountGrams: number;
   enteredQuantity: number;
   enteredUnit: EntryUnit;
@@ -90,6 +124,12 @@ export interface DailyLog {
   date: IsoDate;
   meals: Record<MealType, FoodEntry[]>;
   revision: number;
+  /**
+   * Frozen target and profile weight at the time the day was first written.
+   * Historical days keep these snapshots when the current weight changes.
+   */
+  targetSnapshot?: Nutrition | null;
+  weightKgSnapshot?: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -200,4 +240,5 @@ export interface ImportedFoodInput {
     label: string;
     grams: number;
   }[];
+  batch?: MealPrepBatchMeta;
 }

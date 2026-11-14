@@ -21,6 +21,7 @@ import {
 } from '../domain/constants';
 import { getCurrentLocale, translate } from '../i18n';
 import {
+  formatShortDate,
   getTodayIso,
   isFutureDate,
   isValidIsoDate,
@@ -35,7 +36,11 @@ import {
   updateEntryInLog,
   type EntryAmountInput,
 } from '../domain/logFactory';
-import { buildDaySummary } from '../domain/nutrition';
+import {
+  addNutrition,
+  buildDaySummary,
+  scaleNutrition,
+} from '../domain/nutrition';
 import { getFoodDisplayName } from '../domain/localizedText';
 import {
   foodSchema,
@@ -51,6 +56,7 @@ import type {
   Food,
   FoodDraft,
   IsoDate,
+  MealPrepBatchInput,
   MealType,
   Nutrition,
   ProfileInput,
@@ -60,6 +66,11 @@ import type {
   UserProfile,
 } from '../domain/types';
 import { useToast } from '../ui/ToastProvider';
+import {
+  clearRecentFoodIds,
+  loadRecentFoodIds,
+  rememberRecentFoodId,
+} from './recentFoods';
 
 const repository: CalorieRepository = new IndexedDbRepository();
 
@@ -81,12 +92,20 @@ interface AppActions {
     food: Food,
     amount: EntryAmountInput,
   ) => Promise<boolean>;
+  addEntryForDate: (
+    date: IsoDate,
+    mealType: MealType,
+    food: Food,
+    amount: EntryAmountInput,
+  ) => Promise<boolean>;
+  disposeMealPrepBatch: (batch: Food) => Promise<void>;
   updateEntry: (
     mealType: MealType,
     entryId: string,
     amount: EntryAmountInput,
   ) => Promise<boolean>;
   deleteEntry: (mealType: MealType, entryId: string) => Promise<boolean>;
+  createMealPrepBatch: (input: MealPrepBatchInput) => Promise<Food>;
   createFood: (draft: FoodDraft) => Promise<Food>;
   updateFood: (foodId: string, draft: FoodDraft) => Promise<Food>;
   deleteFood: (foodId: string) => Promise<void>;
@@ -110,6 +129,8 @@ interface AppContextValue {
   profile: UserProfile | null;
   targetSettings: TargetSettings;
   foods: Food[];
+  recentFoodIds: string[];
+  foodUsage: Record<string, number>;
   targets: Nutrition | null;
   selectedDate: IsoDate;
   currentLog: DailyLog | null;
@@ -162,6 +183,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updatedAt: nowIsoTimestamp(),
   });
   const [foods, setFoods] = useState<Food[]>([]);
+  const [foodUsage, setFoodUsage] = useState<Record<string, number>>({});
+  const [recentFoodIds, setRecentFoodIds] = useState<string[]>(
+    loadRecentFoodIds,
+  );
   const [selectedDate, setSelectedDate] = useState<DailyLog['date']>(
     getTodayIso(),
   );
@@ -188,6 +213,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setStorageInfo(info);
     } catch {
       // Storage status is informational and never blocks the diary.
+    }
+  }, []);
+
+  const refreshFoodUsage = useCallback(async () => {
+    try {
+      setFoodUsage(await repository.getFoodUsage());
+    } catch {
+      // Batch remaining amounts are informational; the diary still works.
     }
   }, []);
 
@@ -230,12 +263,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
     async function initialize() {
       try {
         await repository.initialize();
-        const [storedProfile, storedSettings, storedFoods] =
+        const [storedProfile, storedSettings, storedFoods, storedUsage] =
           await Promise.all([
             repository.getProfile(),
             repository.getTargetSettings(),
             repository.listFoods(),
+            repository.getFoodUsage(),
           ]);
+
+        if (cancelled) {
+          return;
+        }
+
+        const storedTargets = resolveTargets(storedProfile, storedSettings);
+        if (storedTargets) {
+          await repository.backfillDailyLogSnapshots(
+            storedTargets,
+            storedProfile?.weightKg ?? null,
+          );
+        }
 
         if (cancelled) {
           return;
@@ -244,6 +290,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setProfile(storedProfile);
         setTargetSettings(storedSettings);
         setFoods(sortFoods(storedFoods));
+        setFoodUsage(storedUsage);
         setStatus('ready');
         void refreshStorageInfo();
       } catch (error) {
@@ -310,7 +357,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const summary = useMemo(
-    () => buildDaySummary(currentLog, targets),
+    () =>
+      buildDaySummary(
+        currentLog,
+        currentLog?.targetSnapshot ?? targets,
+      ),
     [currentLog, targets],
   );
 
@@ -336,7 +387,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       try {
         const next = update(log);
-        const saved = await repository.saveDailyLog(next);
+        const withSnapshots: DailyLog = {
+          ...next,
+          targetSnapshot: next.targetSnapshot ?? targets,
+          weightKgSnapshot:
+            next.weightKgSnapshot ?? profile?.weightKg ?? null,
+        };
+        const saved = await repository.saveDailyLog(withSnapshots);
 
         if (selectedDateRef.current === saved.date) {
           currentLogRef.current = saved;
@@ -348,6 +405,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           showToast(successMessage);
         }
 
+        void refreshFoodUsage();
         return true;
       } catch (error) {
         if (error instanceof StaleWriteError) {
@@ -370,7 +428,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsSaving(false);
       }
     },
-    [showToast],
+    [profile?.weightKg, refreshFoodUsage, showToast, targets],
   );
 
   const completeOnboarding = useCallback(
@@ -403,6 +461,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [showToast],
   );
 
+  const syncTodayTargetSnapshot = useCallback(
+    async (target: Nutrition | null, weightKg: number | null) => {
+      if (!target) {
+        return;
+      }
+      const today = getTodayIso();
+      await repository.updateDailyLogSnapshot(today, target, weightKg);
+      if (currentLogRef.current?.date === today) {
+        const updated: DailyLog = {
+          ...currentLogRef.current,
+          targetSnapshot: { ...target },
+          weightKgSnapshot: weightKg,
+        };
+        currentLogRef.current = updated;
+        setCurrentLog(updated);
+      }
+    },
+    [],
+  );
+
   const saveProfile = useCallback(
     async (input: ProfileInput): Promise<boolean> => {
       try {
@@ -410,8 +488,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ...input,
           updatedAt: nowIsoTimestamp(),
         }) as UserProfile;
+        if (targets) {
+          await repository.backfillDailyLogSnapshots(
+            targets,
+            profile?.weightKg ?? null,
+          );
+        }
         const saved = await repository.saveProfile(nextProfile);
         setProfile(saved);
+        await syncTodayTargetSnapshot(
+          resolveTargets(saved, targetSettings),
+          saved.weightKg,
+        );
         showToast(translate('toast.profileUpdated'));
         return true;
       } catch (error) {
@@ -419,7 +507,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return false;
       }
     },
-    [showToast],
+    [
+      profile?.weightKg,
+      showToast,
+      syncTodayTargetSnapshot,
+      targetSettings,
+      targets,
+    ],
   );
 
   const saveTargetSettings = useCallback(
@@ -429,8 +523,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
           ...input,
           updatedAt: nowIsoTimestamp(),
         }) as TargetSettings;
+        if (targets) {
+          await repository.backfillDailyLogSnapshots(
+            targets,
+            profile?.weightKg ?? null,
+          );
+        }
         const saved = await repository.saveTargetSettings(nextSettings);
         setTargetSettings(saved);
+        await syncTodayTargetSnapshot(
+          resolveTargets(profile, saved),
+          profile?.weightKg ?? null,
+        );
         showToast(
           saved.mode === 'manual'
             ? translate('toast.manualTargetSaved')
@@ -442,7 +546,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         return false;
       }
     },
-    [showToast],
+    [
+      profile,
+      profile?.weightKg,
+      showToast,
+      syncTodayTargetSnapshot,
+      targets,
+    ],
   );
 
   const addEntry = useCallback(
@@ -452,14 +562,130 @@ export function AppProvider({ children }: { children: ReactNode }) {
       amount: EntryAmountInput,
     ): Promise<boolean> => {
       const entry = createFoodEntry(food, amount);
-      return persistLogUpdate(
+      const ok = await persistLogUpdate(
         (log) => addEntryToMeal(log, mealType, entry),
         translate('toast.mealAdded', {
           meal: translate(MEAL_META[mealType].labelKey),
         }),
       );
+      if (ok && foods.some((item) => item.id === food.id)) {
+        setRecentFoodIds((current) =>
+          rememberRecentFoodId(current, food.id),
+        );
+      }
+      return ok;
     },
-    [persistLogUpdate],
+    [foods, persistLogUpdate],
+  );
+
+  const addEntryForDate = useCallback(
+    async (
+      date: IsoDate,
+      mealType: MealType,
+      food: Food,
+      amount: EntryAmountInput,
+    ): Promise<boolean> => {
+      if (!isValidIsoDate(date)) {
+        showToast(translate('toast.dateInvalid'), 'error');
+        return false;
+      }
+      if (savingRef.current) {
+        showToast(translate('toast.savingWait'), 'info');
+        return false;
+      }
+
+      savingRef.current = true;
+      setIsSaving(true);
+
+      try {
+        const existing = await repository.getDailyLog(date);
+        const log = existing ?? createEmptyDailyLog(date);
+        const entry = createFoodEntry(food, amount);
+        const next = addEntryToMeal(log, mealType, entry);
+        const isFuture = date > getTodayIso();
+        const saved = await repository.saveDailyLog({
+          ...next,
+          // A planned future meal should use the target in effect when that
+          // day actually arrives, not the target at planning time.
+          targetSnapshot: isFuture
+            ? null
+            : next.targetSnapshot ?? targets,
+          weightKgSnapshot: isFuture
+            ? null
+            : next.weightKgSnapshot ?? profile?.weightKg ?? null,
+        });
+
+        if (selectedDateRef.current === saved.date) {
+          currentLogRef.current = saved;
+          setCurrentLog(saved);
+          setLastSavedAt(Date.now());
+        }
+
+        if (foods.some((item) => item.id === food.id)) {
+          setRecentFoodIds((current) =>
+            rememberRecentFoodId(current, food.id),
+          );
+        }
+
+        showToast(
+          translate('toast.mealAddedForDate', {
+            date: formatShortDate(saved.date),
+            meal: translate(MEAL_META[mealType].labelKey),
+          }),
+        );
+        void refreshFoodUsage();
+        return true;
+      } catch (error) {
+        if (error instanceof StaleWriteError) {
+          showToast(translate('toast.recordChanged'), 'error');
+        } else {
+          showToast(errorMessage(error), 'error');
+        }
+        return false;
+      } finally {
+        savingRef.current = false;
+        setIsSaving(false);
+      }
+    },
+    [
+      foods,
+      profile?.weightKg,
+      refreshFoodUsage,
+      showToast,
+      targets,
+    ],
+  );
+
+  const disposeMealPrepBatch = useCallback(
+    async (batch: Food): Promise<void> => {
+      if (!batch.batch) {
+        return;
+      }
+      const now = nowIsoTimestamp();
+      const nextFood = foodSchema.parse({
+        ...batch,
+        batch: {
+          ...batch.batch,
+          disposedAt: now,
+        },
+        updatedAt: now,
+      }) as Food;
+
+      try {
+        const saved = await repository.saveFood(nextFood);
+        setFoods((current) =>
+          sortFoods(
+            current.map((food) =>
+              food.id === saved.id ? saved : food,
+            ),
+          ),
+        );
+        showToast(translate('toast.batchDisposed'));
+      } catch (error) {
+        throw new Error(errorMessage(error));
+      }
+    },
+    [showToast],
   );
 
   const updateEntry = useCallback(
@@ -482,6 +708,81 @@ export function AppProvider({ children }: { children: ReactNode }) {
         translate('toast.entryDeleted'),
       ),
     [persistLogUpdate],
+  );
+
+  const createMealPrepBatch = useCallback(
+    async (input: MealPrepBatchInput): Promise<Food> => {
+      const totalGrams = input.components.reduce(
+        (sum, component) => sum + component.grams,
+        0,
+      );
+      const portions = Math.round(input.portions);
+
+      if (
+        input.components.length === 0 ||
+        totalGrams <= 0 ||
+        totalGrams > 100_000 ||
+        portions < 1 ||
+        portions > 100
+      ) {
+        throw new Error(translate('batch.invalidComponents'));
+      }
+
+      let totals: Nutrition = {
+        kcal: 0,
+        proteinG: 0,
+        carbsG: 0,
+        fatG: 0,
+      };
+      for (const component of input.components) {
+        totals = addNutrition(
+          totals,
+          scaleNutrition(
+            component.food.nutritionPer100g,
+            component.grams / 100,
+          ),
+        );
+      }
+
+      const now = nowIsoTimestamp();
+      const portionGrams = totalGrams / portions;
+      const batchName =
+        input.name.trim() || translate('batch.defaultName');
+      const nextFood = foodSchema.parse({
+        id: createId('food'),
+        names: { 'zh-CN': batchName },
+        category: 'other',
+        basis: 'as_sold',
+        nutritionPer100g: scaleNutrition(totals, 100 / totalGrams),
+        servings: [],
+        batch: {
+          totalGrams,
+          portionGrams,
+          portions,
+          components: input.components.map((component) => ({
+            foodId: component.food.id,
+            names: { ...component.food.names },
+            totalGrams: component.grams,
+            nutritionPer100g: {
+              ...component.food.nutritionPer100g,
+            },
+          })),
+        },
+        source: 'custom',
+        createdAt: now,
+        updatedAt: now,
+      }) as Food;
+
+      try {
+        const saved = await repository.saveFood(nextFood);
+        setFoods((current) => sortFoods([...current, saved]));
+        showToast(translate('toast.batchCreated'));
+        return saved;
+      } catch (error) {
+        throw new Error(errorMessage(error));
+      }
+    },
+    [showToast],
   );
 
   const createFood = useCallback(
@@ -631,16 +932,25 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       try {
         const result = await repository.importBackup(payload);
-        const [storedProfile, storedSettings, storedFoods] =
+        const [storedProfile, storedSettings, storedFoods, storedUsage] =
           await Promise.all([
             repository.getProfile(),
             repository.getTargetSettings(),
             repository.listFoods(),
+            repository.getFoodUsage(),
           ]);
+        const storedTargets = resolveTargets(storedProfile, storedSettings);
+        if (storedTargets) {
+          await repository.backfillDailyLogSnapshots(
+            storedTargets,
+            storedProfile?.weightKg ?? null,
+          );
+        }
 
         setProfile(storedProfile);
         setTargetSettings(storedSettings);
         setFoods(sortFoods(storedFoods));
+        setFoodUsage(storedUsage);
         setLogReloadToken((value) => value + 1);
         void refreshStorageInfo();
         return result;
@@ -697,6 +1007,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     try {
       await repository.resetAllData();
+      clearRecentFoodIds();
       window.location.reload();
       return true;
     } catch (error) {
@@ -711,8 +1022,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveProfile,
       saveTargetSettings,
       addEntry,
+      addEntryForDate,
+      disposeMealPrepBatch,
       updateEntry,
       deleteEntry,
+      createMealPrepBatch,
       createFood,
       updateFood,
       deleteFood,
@@ -731,8 +1045,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       saveProfile,
       saveTargetSettings,
       addEntry,
+      addEntryForDate,
+      disposeMealPrepBatch,
       updateEntry,
       deleteEntry,
+      createMealPrepBatch,
       createFood,
       updateFood,
       deleteFood,
@@ -755,6 +1072,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       profile,
       targetSettings,
       foods,
+      recentFoodIds,
+      foodUsage,
       targets,
       selectedDate,
       currentLog,
@@ -772,6 +1091,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       profile,
       targetSettings,
       foods,
+      recentFoodIds,
+      foodUsage,
       targets,
       selectedDate,
       currentLog,

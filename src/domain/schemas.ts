@@ -104,6 +104,27 @@ export const isoDateSchema = z
   .regex(ISO_DATE_PATTERN, { message: '日期格式必须为 YYYY-MM-DD' })
   .refine(isValidIsoDate, { message: '日期无效' });
 
+export const mealPrepBatchComponentSchema = z.object({
+  foodId: z.string().min(1).max(120).optional(),
+  names: localizedTextSchema,
+  totalGrams: finiteNumber.positive().max(100_000),
+  nutritionPer100g: nutritionSchema,
+});
+
+export const mealPrepBatchMetaSchema = z
+  .object({
+    totalGrams: finiteNumber.positive().max(100_000),
+    portionGrams: finiteNumber.positive().max(100_000),
+    portions: z.number().int().positive().max(100).optional(),
+    components: z.array(mealPrepBatchComponentSchema).max(50).optional(),
+    sourceFoodId: z.string().min(1).max(120).optional(),
+    disposedAt: timestampSchema.optional(),
+  })
+  .refine((value) => value.portionGrams <= value.totalGrams, {
+    message: '每份重量不能超过总重量',
+    path: ['portionGrams'],
+  });
+
 export const foodSchema = z.object({
   id: z.string().min(1).max(120),
   names: localizedTextSchema,
@@ -111,6 +132,7 @@ export const foodSchema = z.object({
   basis: foodBasisSchema,
   nutritionPer100g: nutritionSchema,
   servings: z.array(servingSchema).max(20),
+  batch: mealPrepBatchMetaSchema.optional(),
   source: foodSourceSchema,
   createdAt: timestampSchema,
   updatedAt: timestampSchema,
@@ -129,6 +151,7 @@ export const importedFoodSchema = z.object({
   basis: foodBasisSchema,
   nutritionPer100g: nutritionSchema,
   servings: z.array(importedServingSchema).max(20).optional(),
+  batch: mealPrepBatchMetaSchema.optional(),
 });
 
 export const foodImportSchema = z
@@ -179,6 +202,15 @@ export const foodEntrySchema = z
     id: z.string().min(1).max(120),
     foodId: z.string().min(1).max(120),
     foodNames: localizedTextSchema,
+    batchComponents: z
+      .array(
+        z.object({
+          names: localizedTextSchema,
+          totalGrams: finiteNumber.positive().max(100_000),
+        }),
+      )
+      .max(50)
+      .optional(),
     amountGrams: finiteNumber.positive().max(100_000),
     enteredQuantity: finiteNumber.positive().max(100_000),
     enteredUnit: z.enum(['g', 'serving']),
@@ -217,6 +249,8 @@ export const dailyLogSchema = z.object({
     snack: z.array(foodEntrySchema),
   }),
   revision: z.number().int().min(0),
+  targetSnapshot: nutritionSchema.nullable().optional(),
+  weightKgSnapshot: finiteNumber.min(25).max(350).nullable().optional(),
   createdAt: timestampSchema,
   updatedAt: timestampSchema,
 });

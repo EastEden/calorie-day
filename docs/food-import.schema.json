@@ -99,6 +99,67 @@
         }
       }
     },
+    "batch": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["totalGrams", "portionGrams"],
+      "properties": {
+        "totalGrams": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100000
+        },
+        "portionGrams": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100000
+        },
+        "portions": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        },
+        "components": {
+          "type": "array",
+          "maxItems": 50,
+          "items": {
+            "$ref": "#/definitions/batchComponent"
+          }
+        },
+        "sourceFoodId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "disposedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "batchComponent": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["names", "totalGrams", "nutritionPer100g"],
+      "properties": {
+        "foodId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "names": {
+          "$ref": "#/definitions/names"
+        },
+        "totalGrams": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "maximum": 100000
+        },
+        "nutritionPer100g": {
+          "$ref": "#/definitions/nutrition"
+        }
+      }
+    },
     "food": {
       "type": "object",
       "additionalProperties": false,
@@ -139,6 +200,9 @@
           "items": {
             "$ref": "#/definitions/serving"
           }
+        },
+        "batch": {
+          "$ref": "#/definitions/batch"
         }
       }
     }

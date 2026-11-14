@@ -37,8 +37,26 @@ export function QuickOilModal({
   onClose,
 }: QuickOilModalProps) {
   const { t, locale } = useI18n();
-  const { foods, actions, isSaving } = useApp();
-  const oils = useMemo(() => getCookingOilFoods(foods), [foods]);
+  const { foods, recentFoodIds, actions, isSaving } = useApp();
+  const oils = useMemo(() => {
+    const ranks = new Map(
+      recentFoodIds.map((foodId, index) => [foodId, index]),
+    );
+    return getCookingOilFoods(foods).sort((a, b) => {
+      const rankA = ranks.get(a.id);
+      const rankB = ranks.get(b.id);
+      if (rankA === undefined && rankB === undefined) {
+        return 0;
+      }
+      if (rankA === undefined) {
+        return 1;
+      }
+      if (rankB === undefined) {
+        return -1;
+      }
+      return rankA - rankB;
+    });
+  }, [foods, recentFoodIds]);
   const [oilId, setOilId] = useState('');
   const [amount, setAmount] = useState('5');
   const [attempted, setAttempted] = useState(false);
