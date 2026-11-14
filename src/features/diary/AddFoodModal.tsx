@@ -66,6 +66,9 @@ export function AddFoodModal({
     const normalizedSearch = search.trim().toLocaleLowerCase(locale);
     return foods
       .filter((food) => {
+        if (food.batch) {
+          return false;
+        }
         if (category !== 'all' && food.category !== category) {
           return false;
         }
