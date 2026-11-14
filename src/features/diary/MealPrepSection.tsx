@@ -7,7 +7,10 @@ import {
   Trash2,
 } from 'lucide-react';
 import { formatDecimal } from '../../domain/formatters';
-import { getFoodDisplayName } from '../../domain/localizedText';
+import {
+  getFoodDisplayName,
+  resolveLocalizedText,
+} from '../../domain/localizedText';
 import type { Food } from '../../domain/types';
 import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
@@ -34,7 +37,7 @@ export function MealPrepSection() {
     () => foods.filter((food) => food.batch),
     [foods],
   );
-  const activeCount = batches.filter((batch) => {
+  const activeBatches = batches.filter((batch) => {
     if (!batch.batch || batch.batch.disposedAt) {
       return false;
     }
@@ -44,7 +47,8 @@ export function MealPrepSection() {
         batch.batch.totalGrams - (foodUsage[batch.id] ?? 0),
       ) > 0.001
     );
-  }).length;
+  });
+  const activeCount = activeBatches.length;
 
   const handleDelete = async (batch: Food) => {
     try {
@@ -137,31 +141,32 @@ export function MealPrepSection() {
 
       <p className="meal-prep-section__intro">{t('batch.description')}</p>
 
-      {batches.length === 0 ? (
+      {activeBatches.length === 0 ? (
         <p className="meal-prep-section__empty">{t('batch.emptyHint')}</p>
       ) : (
         <div className="meal-prep-list">
-          {batches.map((batch) => {
+          {activeBatches.map((batch) => {
             const meta = batch.batch;
             if (!meta) {
               return null;
             }
-            const disposed = Boolean(meta.disposedAt);
             const used = foodUsage[batch.id] ?? 0;
-            const remaining = disposed
-              ? 0
-              : Math.max(0, meta.totalGrams - used);
+            const remaining = Math.max(0, meta.totalGrams - used);
             const remainingPortions =
               meta.portionGrams > 0
                 ? Math.floor(remaining / meta.portionGrams + 0.0001)
                 : 0;
-            const progress = disposed
-              ? 100
-              : Math.min(
-                  100,
-                  Math.max(0, (used / meta.totalGrams) * 100),
-                );
-            const finished = remaining <= 0.001;
+            const portions =
+              meta.portions ??
+              Math.max(1, Math.round(meta.totalGrams / meta.portionGrams));
+            const componentText = meta.components
+              ?.map(
+                (component) =>
+                  `${resolveLocalizedText(component.names, locale)} ${formatDecimal(
+                    component.totalGrams,
+                  )}g`,
+              )
+              .join(' · ');
 
             return (
               <article className="meal-prep-row" key={batch.id}>
@@ -171,9 +176,14 @@ export function MealPrepSection() {
                     <small>
                       {t('batch.totalDetail', {
                         grams: formatDecimal(meta.totalGrams),
-                        portion: formatDecimal(meta.portionGrams),
+                        portions,
                       })}
                     </small>
+                    {componentText && (
+                      <small className="meal-prep-row__components">
+                        {componentText}
+                      </small>
+                    )}
                   </div>
                   {confirmDeleteId === batch.id ? (
                     <div className="meal-prep-row__delete-confirm">
@@ -214,28 +224,16 @@ export function MealPrepSection() {
                   )}
                 </div>
 
-                <div className="progress-track meal-prep-row__progress">
-                  <span
-                    className="progress-fill"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-
                 <div className="meal-prep-row__footer">
                   <div>
                     <strong>
-                      {disposed
-                        ? t('batch.disposed')
-                        : finished
-                          ? t('batch.finished')
-                          : t('batch.remaining', {
-                              grams: formatDecimal(remaining),
-                              portions: remainingPortions,
-                            })}
+                      {t('batch.remaining', {
+                        grams: formatDecimal(remaining),
+                        portions: remainingPortions,
+                      })}
                     </strong>
                   </div>
-                  {!finished && !disposed && (
-                    <div className="meal-prep-row__actions">
+                  <div className="meal-prep-row__actions">
                       {confirmDisposeId === batch.id ? (
                         <>
                           <Button
@@ -280,8 +278,7 @@ export function MealPrepSection() {
                       >
                         {t('batch.record')}
                       </Button>
-                    </div>
-                  )}
+                  </div>
                 </div>
               </article>
             );

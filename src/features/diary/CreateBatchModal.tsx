@@ -4,8 +4,14 @@ import {
   useState,
   type FormEvent,
 } from 'react';
-import { formatDecimal } from '../../domain/formatters';
+import { Plus, Trash2 } from 'lucide-react';
+import {
+  formatDecimal,
+  formatKcal,
+} from '../../domain/formatters';
+import { createId } from '../../domain/id';
 import { getFoodDisplayName } from '../../domain/localizedText';
+import { addNutrition, scaleNutrition } from '../../domain/nutrition';
 import type { Food } from '../../domain/types';
 import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
@@ -15,6 +21,12 @@ import { Modal } from '../../ui/Modal';
 interface CreateBatchModalProps {
   open: boolean;
   onClose: () => void;
+}
+
+interface ComponentRow {
+  key: string;
+  foodId: string;
+  grams: string;
 }
 
 function parseNumber(value: string): number {
@@ -49,40 +61,113 @@ export function CreateBatchModal({
       });
   }, [foods, recentFoodIds]);
 
-  const [foodId, setFoodId] = useState('');
-  const [totalGrams, setTotalGrams] = useState('1000');
-  const [portionGrams, setPortionGrams] = useState('250');
+  const [name, setName] = useState('');
+  const [rows, setRows] = useState<ComponentRow[]>([]);
+  const [portions, setPortions] = useState('4');
   const [attempted, setAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const selectedFood: Food | undefined =
-    candidates.find((food) => food.id === foodId) ?? candidates[0];
-  const total = parseNumber(totalGrams);
-  const portion = parseNumber(portionGrams);
-  const totalValid =
-    Number.isFinite(total) && total > 0 && total <= 100_000;
-  const portionValid =
-    Number.isFinite(portion) &&
-    portion > 0 &&
-    portion <= 100_000 &&
-    totalValid &&
-    portion <= total;
-  const portions =
-    totalValid && portionValid ? Math.floor(total / portion) : 0;
+  const resolvedRows = rows.map((row) => ({
+    row,
+    food: candidates.find((food) => food.id === row.foodId),
+    grams: parseNumber(row.grams),
+  }));
+  const rowsValid =
+    resolvedRows.length > 0 &&
+    resolvedRows.every(
+      (item) =>
+        item.food &&
+        Number.isFinite(item.grams) &&
+        item.grams > 0 &&
+        item.grams <= 100_000,
+    );
+  const totalGrams = resolvedRows.reduce(
+    (sum, item) =>
+      item.food && Number.isFinite(item.grams) && item.grams > 0
+        ? sum + item.grams
+        : sum,
+    0,
+  );
+  const portionsNumber = Number(portions);
+  const portionsValid =
+    Number.isInteger(portionsNumber) &&
+    portionsNumber >= 1 &&
+    portionsNumber <= 100;
+  const totalNutrition = resolvedRows.reduce(
+    (total, item) => {
+      if (!item.food || !Number.isFinite(item.grams) || item.grams <= 0) {
+        return total;
+      }
+      return addNutrition(
+        total,
+        scaleNutrition(item.food.nutritionPer100g, item.grams / 100),
+      );
+    },
+    { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 },
+  );
+  const isValid =
+    rowsValid &&
+    portionsValid &&
+    totalGrams > 0 &&
+    totalGrams <= 100_000;
   const isBusy = submitting || isSaving;
 
   useEffect(() => {
     if (!open) {
       return;
     }
-    setFoodId(candidates[0]?.id ?? '');
-    setTotalGrams('1000');
-    setPortionGrams('250');
+    const first = candidates[0];
+    setName('');
+    setRows(
+      first
+        ? [
+            {
+              key: createId('batch-row'),
+              foodId: first.id,
+              grams: '500',
+            },
+          ]
+        : [],
+    );
+    setPortions('4');
     setAttempted(false);
     setSubmitting(false);
     setSubmitError(null);
   }, [candidates, open]);
+
+  const addRow = () => {
+    const used = new Set(rows.map((row) => row.foodId));
+    const nextFood =
+      candidates.find((food) => !used.has(food.id)) ?? candidates[0];
+    if (!nextFood) {
+      return;
+    }
+    setRows((current) => [
+      ...current,
+      {
+        key: createId('batch-row'),
+        foodId: nextFood.id,
+        grams: '200',
+      },
+    ]);
+  };
+
+  const updateRow = (key: string, patch: Partial<ComponentRow>) => {
+    setRows((current) =>
+      current.map((row) =>
+        row.key === key ? { ...row, ...patch } : row,
+      ),
+    );
+  };
+
+  const removeRow = (key: string) => {
+    setRows((current) =>
+      current.length <= 1
+        ? current
+        : current.filter((row) => row.key !== key),
+    );
+  };
 
   const handleClose = () => {
     if (!isBusy) {
@@ -95,17 +180,33 @@ export function CreateBatchModal({
     setAttempted(true);
     setSubmitError(null);
 
-    if (!selectedFood || !totalValid || !portionValid || isBusy) {
+    if (!isValid || isBusy) {
       return;
     }
 
+    const components = resolvedRows
+      .filter(
+        (item): item is typeof item & { food: Food } =>
+          Boolean(item.food),
+      )
+      .map((item) => ({
+        food: item.food,
+        grams: item.grams,
+      }));
+
     setSubmitting(true);
     try {
-      await actions.createMealPrepBatch(selectedFood, total, portion);
+      await actions.createMealPrepBatch({
+        name,
+        components,
+        portions: portionsNumber,
+      });
       onClose();
     } catch (error) {
       setSubmitError(
-        error instanceof Error ? error.message : t('batch.invalidTotal'),
+        error instanceof Error
+          ? error.message
+          : t('batch.invalidComponents'),
       );
     } finally {
       setSubmitting(false);
@@ -148,86 +249,127 @@ export function CreateBatchModal({
         ) : (
           <>
             <label className="field">
-              <span className="field-label">{t('batch.food')}</span>
-              <select
-                value={selectedFood?.id ?? ''}
-                onChange={(event) => setFoodId(event.target.value)}
+              <span className="field-label">{t('batch.groupName')}</span>
+              <input
+                type="text"
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder={t('batch.groupNamePlaceholder')}
+                maxLength={80}
                 disabled={isBusy}
-              >
-                {candidates.map((food) => (
-                  <option key={food.id} value={food.id}>
-                    {getFoodDisplayName(food, locale)}
-                  </option>
-                ))}
-              </select>
+              />
             </label>
 
-            <div className="field-row">
-              <label className="field">
-                <span className="field-label">
-                  {t('batch.totalGrams')}
-                </span>
-                <span className="input-with-suffix">
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min={1}
-                    max={100_000}
-                    step="any"
-                    value={totalGrams}
-                    onChange={(event) => setTotalGrams(event.target.value)}
-                    disabled={isBusy}
-                  />
-                  <span>{t('common.gram')}</span>
-                </span>
-              </label>
-
-              <label className="field">
-                <span className="field-label">
-                  {t('batch.portionGrams')}
-                </span>
-                <span className="input-with-suffix">
-                  <input
-                    type="number"
-                    inputMode="decimal"
-                    min={1}
-                    max={100_000}
-                    step="any"
-                    value={portionGrams}
-                    onChange={(event) => setPortionGrams(event.target.value)}
-                    disabled={isBusy}
-                  />
-                  <span>{t('common.gram')}</span>
-                </span>
-              </label>
+            <div className="field">
+              <span className="field-label">{t('batch.components')}</span>
+              <div className="meal-prep-components">
+                {rows.map((row, index) => (
+                  <div className="meal-prep-component-row" key={row.key}>
+                    <select
+                      value={row.foodId}
+                      onChange={(event) =>
+                        updateRow(row.key, {
+                          foodId: event.target.value,
+                        })
+                      }
+                      aria-label={t('batch.componentFoodAria', {
+                        index: index + 1,
+                      })}
+                      disabled={isBusy}
+                    >
+                      {candidates.map((food) => (
+                        <option key={food.id} value={food.id}>
+                          {getFoodDisplayName(food, locale)}
+                        </option>
+                      ))}
+                    </select>
+                    <label className="meal-prep-component-grams">
+                      <input
+                        type="number"
+                        inputMode="decimal"
+                        min={1}
+                        max={100_000}
+                        step="any"
+                        value={row.grams}
+                        onChange={(event) =>
+                          updateRow(row.key, {
+                            grams: event.target.value,
+                          })
+                        }
+                        aria-label={t('batch.componentGramsAria', {
+                          index: index + 1,
+                        })}
+                        disabled={isBusy}
+                      />
+                      <span>{t('common.gram')}</span>
+                    </label>
+                    <button
+                      type="button"
+                      className="icon-button meal-prep-component-remove"
+                      onClick={() => removeRow(row.key)}
+                      disabled={isBusy || rows.length <= 1}
+                      aria-label={t('batch.removeComponentAria', {
+                        index: index + 1,
+                      })}
+                    >
+                      <Trash2 size={14} aria-hidden="true" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                icon={<Plus size={14} />}
+                onClick={addRow}
+                disabled={isBusy || rows.length >= candidates.length}
+              >
+                {t('batch.addComponent')}
+              </Button>
             </div>
+
+            <label className="field">
+              <span className="field-label">{t('batch.portionCount')}</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                min={1}
+                max={100}
+                step={1}
+                value={portions}
+                onChange={(event) => setPortions(event.target.value)}
+                disabled={isBusy}
+              />
+              <span className="field-hint">{t('batch.portionCountHint')}</span>
+            </label>
 
             <p className="field-hint">{t('batch.nutritionHint')}</p>
 
-            {attempted && !totalValid && (
+            {attempted && !rowsValid && (
               <p className="form-error" role="alert">
-                {t('batch.invalidTotal')}
+                {t('batch.invalidComponents')}
               </p>
             )}
-            {attempted && totalValid && !portionValid && (
+            {attempted && rowsValid && !portionsValid && (
               <p className="form-error" role="alert">
-                {t('batch.invalidPortion')}
+                {t('batch.invalidPortions')}
               </p>
             )}
 
-            {selectedFood && totalValid && portionValid && (
+            {isValid && (
               <div className="portion-preview">
                 <div className="portion-preview__energy">
-                  <span>{t('batch.portionPreview', {
-                    n: portions,
-                    grams: formatDecimal(portion),
-                  })}</span>
+                  <span>
+                    {t('batch.groupPreview', {
+                      grams: formatDecimal(totalGrams),
+                      portions: portionsNumber,
+                    })}
+                  </span>
                   <strong>
-                    {formatDecimal(portions)} × {formatDecimal(portion)}g
+                    {formatKcal(totalNutrition.kcal)} {t('common.kcal')}
                   </strong>
                   <small>
-                    {getFoodDisplayName(selectedFood, locale)} ·{' '}
-                    {formatDecimal(total)}g
+                    {name.trim() || t('batch.defaultName')}
                   </small>
                 </div>
               </div>

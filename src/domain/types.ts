@@ -55,11 +55,26 @@ export type LocalizedText = Record<string, string> & {
   'zh-CN': string;
 };
 
+export interface MealPrepBatchComponent {
+  foodId?: string;
+  names: LocalizedText;
+  totalGrams: number;
+  nutritionPer100g: Nutrition;
+}
+
 export interface MealPrepBatchMeta {
   totalGrams: number;
   portionGrams: number;
+  portions?: number;
+  components?: MealPrepBatchComponent[];
   sourceFoodId?: string;
   disposedAt?: string;
+}
+
+export interface MealPrepBatchInput {
+  name: string;
+  components: { food: Food; grams: number }[];
+  portions: number;
 }
 
 export interface Food {

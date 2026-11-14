@@ -644,9 +644,17 @@
   flex: none;
 }
 
-.meal-prep-row__progress {
-  height: 6px;
-  margin: 10px 0 9px;
+.meal-prep-row__components {
+  overflow: hidden;
+  margin-top: 2px;
+  color: var(--muted-soft);
+  font-size: 9.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meal-prep-row__footer {
+  margin-top: 10px;
 }
 
 .meal-prep-row__footer strong {
@@ -660,6 +668,48 @@
 .meal-prep-portion {
   display: grid;
   gap: 16px;
+}
+
+.meal-prep-components {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 8px;
+}
+
+.meal-prep-component-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 92px 28px;
+  align-items: center;
+  gap: 6px;
+}
+
+.meal-prep-component-row select {
+  width: 100%;
+  min-width: 0;
+}
+
+.meal-prep-component-grams {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.meal-prep-component-grams input {
+  width: 100%;
+  min-width: 0;
+}
+
+.meal-prep-component-grams span {
+  flex: none;
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.meal-prep-component-remove {
+  width: 28px;
+  height: 28px;
+  color: var(--muted-soft);
 }
 
 @media (max-width: 640px) {

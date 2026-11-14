@@ -114,6 +114,15 @@ describe('foodTransfer', () => {
       batch: {
         totalGrams: 1200,
         portionGrams: 300,
+        portions: 4,
+        components: [
+          {
+            foodId: existing.id,
+            names: { ...existing.names },
+            totalGrams: 1200,
+            nutritionPer100g: { ...existing.nutritionPer100g },
+          },
+        ],
         sourceFoodId: existing.id,
       },
     };

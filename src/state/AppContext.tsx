@@ -36,7 +36,11 @@ import {
   updateEntryInLog,
   type EntryAmountInput,
 } from '../domain/logFactory';
-import { buildDaySummary } from '../domain/nutrition';
+import {
+  addNutrition,
+  buildDaySummary,
+  scaleNutrition,
+} from '../domain/nutrition';
 import { getFoodDisplayName } from '../domain/localizedText';
 import {
   foodSchema,
@@ -52,6 +56,7 @@ import type {
   Food,
   FoodDraft,
   IsoDate,
+  MealPrepBatchInput,
   MealType,
   Nutrition,
   ProfileInput,
@@ -100,11 +105,7 @@ interface AppActions {
     amount: EntryAmountInput,
   ) => Promise<boolean>;
   deleteEntry: (mealType: MealType, entryId: string) => Promise<boolean>;
-  createMealPrepBatch: (
-    sourceFood: Food,
-    totalGrams: number,
-    portionGrams: number,
-  ) => Promise<Food>;
+  createMealPrepBatch: (input: MealPrepBatchInput) => Promise<Food>;
   createFood: (draft: FoodDraft) => Promise<Food>;
   updateFood: (foodId: string, draft: FoodDraft) => Promise<Food>;
   deleteFood: (foodId: string) => Promise<void>;
@@ -710,33 +711,62 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const createMealPrepBatch = useCallback(
-    async (
-      sourceFood: Food,
-      totalGrams: number,
-      portionGrams: number,
-    ): Promise<Food> => {
+    async (input: MealPrepBatchInput): Promise<Food> => {
+      const totalGrams = input.components.reduce(
+        (sum, component) => sum + component.grams,
+        0,
+      );
+      const portions = Math.round(input.portions);
+
+      if (
+        input.components.length === 0 ||
+        totalGrams <= 0 ||
+        totalGrams > 100_000 ||
+        portions < 1 ||
+        portions > 100
+      ) {
+        throw new Error(translate('batch.invalidComponents'));
+      }
+
+      let totals: Nutrition = {
+        kcal: 0,
+        proteinG: 0,
+        carbsG: 0,
+        fatG: 0,
+      };
+      for (const component of input.components) {
+        totals = addNutrition(
+          totals,
+          scaleNutrition(
+            component.food.nutritionPer100g,
+            component.grams / 100,
+          ),
+        );
+      }
+
       const now = nowIsoTimestamp();
-      const batchName = translate('batch.foodName', {
-        name: getFoodDisplayName(sourceFood, getCurrentLocale()),
-      });
+      const portionGrams = totalGrams / portions;
+      const batchName =
+        input.name.trim() || translate('batch.defaultName');
       const nextFood = foodSchema.parse({
-        ...sourceFood,
         id: createId('food'),
-        names: {
-          ...sourceFood.names,
-          'zh-CN': batchName,
-        },
-        servings: [
-          {
-            id: createId('serving'),
-            label: translate('batch.portionLabel'),
-            grams: portionGrams,
-          },
-        ],
+        names: { 'zh-CN': batchName },
+        category: 'other',
+        basis: 'as_sold',
+        nutritionPer100g: scaleNutrition(totals, 100 / totalGrams),
+        servings: [],
         batch: {
           totalGrams,
           portionGrams,
-          sourceFoodId: sourceFood.id,
+          portions,
+          components: input.components.map((component) => ({
+            foodId: component.food.id,
+            names: { ...component.food.names },
+            totalGrams: component.grams,
+            nutritionPer100g: {
+              ...component.food.nutritionPer100g,
+            },
+          })),
         },
         source: 'custom',
         createdAt: now,

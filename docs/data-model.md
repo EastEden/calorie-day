@@ -50,6 +50,13 @@ interface Food {
   batch?: {
     totalGrams: number;
     portionGrams: number;
+    portions?: number;
+    components?: {
+      foodId?: string;
+      names: LocalizedText;
+      totalGrams: number;
+      nutritionPer100g: Nutrition;
+    }[];
     sourceFoodId?: string;
     disposedAt?: string;
   };
@@ -161,13 +168,15 @@ interface TargetSettings {
 
 ### 4.5 大份菜备餐
 
-备餐不是单独的表，而是一个带 `batch` 元数据的自定义 `Food`：
+备餐不是单独的表，而是一个带 `batch` 元数据的自定义 `Food`。一个备餐代表一组食材：
 
-- `totalGrams`：整道菜的总重量。
-- `portionGrams`：默认一份的重量。
-- `sourceFoodId`：来源于哪个食物（可选）。
+- `components`：组内每项食材的名称、总克数和每 100g 营养快照。
+- `totalGrams`：所有食材的总重量。
+- `portions`：总份数；`portionGrams = totalGrams / portions` 自动计算。
+- `sourceFoodId`：旧版单项备餐的来源食物（兼容字段）。
 - `disposedAt`：剩余部分被丢弃的时间；存在时剩余量视为 0，不计入摄入。
 - 剩余量 = `totalGrams - sum(该 foodId 的所有 FoodEntry.amountGrams)`。
+- 剩余量降到 0 或执行丢弃后，备餐会从进行中列表自动移除。
 
 备餐是全局数据，不绑定某一天。记录时可以单独选择日期和餐次，因此支持“今晚做好、
 明早吃”的跨天安排。未来日期的记录在当天到达后进入日记。
