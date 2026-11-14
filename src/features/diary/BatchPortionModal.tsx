@@ -145,10 +145,10 @@ export function BatchPortionModal({
               nutritionPer100g={batch.nutritionPer100g}
               servings={batch.servings}
               initial={{
-                enteredQuantity: Math.min(
-                  batch.batch.portionGrams,
-                  remaining,
-                ),
+                enteredQuantity:
+                  Math.round(
+                    Math.min(batch.batch.portionGrams, remaining) * 10,
+                  ) / 10,
                 enteredUnit: 'g',
               }}
               submitLabel={t('batch.recordSubmit', { meal: mealLabel })}

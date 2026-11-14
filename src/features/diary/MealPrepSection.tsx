@@ -109,7 +109,6 @@ export function MealPrepSection() {
     >
       <div className="section-heading">
         <div>
-          <p className="eyebrow">{t('batch.globalEyebrow')}</p>
           <h2 id="meal-prep-title">{t('batch.title')}</h2>
         </div>
         <div className="meal-prep-section__actions">

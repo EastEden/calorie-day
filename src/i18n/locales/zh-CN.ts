@@ -258,7 +258,6 @@ export const zhCN = {
   // Meal prep batches
   'batch.eyebrow': '备餐',
   'batch.title': '备餐',
-  'batch.globalEyebrow': '全局',
   'batch.description':
     '全局记录，不绑定日期；可以把备餐分到任意一天、任意餐次，剩余量会自动计算。',
   'batch.barTitle': '备餐',
