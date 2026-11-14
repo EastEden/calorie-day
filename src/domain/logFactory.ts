@@ -44,6 +44,14 @@ export function createFoodEntry(
     id: createId('entry'),
     foodId: food.id,
     foodNames: { ...food.names },
+    ...(food.batch?.components
+      ? {
+          batchComponents: food.batch.components.map((component) => ({
+            names: { ...component.names },
+            totalGrams: component.totalGrams,
+          })),
+        }
+      : {}),
     amountGrams: amount.grams,
     enteredQuantity: amount.enteredQuantity,
     enteredUnit: amount.enteredUnit,

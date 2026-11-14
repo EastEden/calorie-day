@@ -95,6 +95,11 @@ export interface Food {
   updatedAt: string;
 }
 
+export interface FoodEntryBatchComponent {
+  names: LocalizedText;
+  totalGrams: number;
+}
+
 export interface FoodEntry {
   id: string;
   foodId: string;
@@ -103,6 +108,7 @@ export interface FoodEntry {
    * This keeps historical entries stable when the food library changes.
    */
   foodNames: LocalizedText;
+  batchComponents?: FoodEntryBatchComponent[];
   amountGrams: number;
   enteredQuantity: number;
   enteredUnit: EntryUnit;

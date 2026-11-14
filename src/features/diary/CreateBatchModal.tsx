@@ -4,15 +4,30 @@ import {
   useState,
   type FormEvent,
 } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Search,
+  Trash2,
+} from 'lucide-react';
+import {
+  FOOD_BASIS_LABEL_KEYS,
+  FOOD_CATEGORIES,
+  FOOD_CATEGORY_LABEL_KEYS,
+} from '../../domain/constants';
 import {
   formatDecimal,
   formatKcal,
 } from '../../domain/formatters';
 import { createId } from '../../domain/id';
-import { getFoodDisplayName } from '../../domain/localizedText';
+import {
+  getFoodDisplayName,
+  getFoodSearchText,
+} from '../../domain/localizedText';
 import { addNutrition, scaleNutrition } from '../../domain/nutrition';
-import type { Food } from '../../domain/types';
+import type { Food, FoodCategory } from '../../domain/types';
 import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { Button } from '../../ui/Button';
@@ -28,6 +43,8 @@ interface ComponentRow {
   foodId: string;
   grams: string;
 }
+
+type CategoryFilter = FoodCategory | 'all';
 
 function parseNumber(value: string): number {
   return Number(value.replace(',', '.'));
@@ -67,6 +84,37 @@ export function CreateBatchModal({
   const [attempted, setAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [pickingRowKey, setPickingRowKey] = useState<string | null>(
+    null,
+  );
+  const [pickerSearch, setPickerSearch] = useState('');
+  const [pickerCategory, setPickerCategory] =
+    useState<CategoryFilter>('all');
+
+  const pickerFoods = useMemo(() => {
+    const normalizedSearch = pickerSearch
+      .trim()
+      .toLocaleLowerCase(locale);
+    return candidates.filter((food) => {
+      if (
+        pickerCategory !== 'all' &&
+        food.category !== pickerCategory
+      ) {
+        return false;
+      }
+      if (!normalizedSearch) {
+        return true;
+      }
+      return (
+        getFoodSearchText(food)
+          .toLocaleLowerCase(locale)
+          .includes(normalizedSearch) ||
+        t(FOOD_CATEGORY_LABEL_KEYS[food.category]).includes(
+          normalizedSearch,
+        )
+      );
+    });
+  }, [candidates, locale, pickerCategory, pickerSearch, t]);
 
   const resolvedRows = rows.map((row) => ({
     row,
@@ -134,6 +182,9 @@ export function CreateBatchModal({
     setAttempted(false);
     setSubmitting(false);
     setSubmitError(null);
+    setPickingRowKey(null);
+    setPickerSearch('');
+    setPickerCategory('all');
   }, [candidates, open]);
 
   const addRow = () => {
@@ -218,24 +269,151 @@ export function CreateBatchModal({
       open={open}
       onClose={handleClose}
       size="sm"
-      title={t('batch.createTitle')}
-      description={t('batch.createDescription')}
+      title={
+        pickingRowKey
+          ? t('batch.pickComponentTitle')
+          : t('batch.createTitle')
+      }
+      description={
+        pickingRowKey
+          ? t('batch.pickComponentDescription')
+          : t('batch.createDescription')
+      }
       footer={
-        <>
-          <Button variant="ghost" onClick={handleClose} disabled={isBusy}>
-            {t('common.cancel')}
-          </Button>
+        pickingRowKey ? (
           <Button
-            type="submit"
-            form="create-batch-form"
-            loading={submitting}
-            disabled={isBusy || candidates.length === 0}
+            variant="ghost"
+            onClick={() => setPickingRowKey(null)}
+            disabled={isBusy}
           >
-            {t('batch.create')}
+            {t('batch.backToBatch')}
           </Button>
-        </>
+        ) : (
+          <>
+            <Button
+              variant="ghost"
+              onClick={handleClose}
+              disabled={isBusy}
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="submit"
+              form="create-batch-form"
+              loading={submitting}
+              disabled={isBusy || candidates.length === 0}
+            >
+              {t('batch.create')}
+            </Button>
+          </>
+        )
       }
     >
+      {pickingRowKey ? (
+        <div className="food-picker meal-prep-picker">
+          <button
+            type="button"
+            className="text-button text-button--back"
+            onClick={() => setPickingRowKey(null)}
+          >
+            <ChevronLeft size={16} aria-hidden="true" />
+            {t('batch.backToBatch')}
+          </button>
+
+          <div className="search-field">
+            <Search size={18} aria-hidden="true" />
+            <input
+              type="search"
+              value={pickerSearch}
+              onChange={(event) => setPickerSearch(event.target.value)}
+              placeholder={t('addFood.searchPlaceholder')}
+              aria-label={t('addFood.searchAria')}
+              autoFocus
+            />
+          </div>
+
+          <div
+            className="filter-chips"
+            aria-label={t('addFood.filterAria')}
+          >
+            <button
+              type="button"
+              className={`filter-chip ${
+                pickerCategory === 'all' ? 'is-active' : ''
+              }`}
+              onClick={() => setPickerCategory('all')}
+            >
+              {t('addFood.all')}
+            </button>
+            {FOOD_CATEGORIES.map((category) => (
+              <button
+                type="button"
+                key={category}
+                className={`filter-chip ${
+                  pickerCategory === category ? 'is-active' : ''
+                }`}
+                onClick={() => setPickerCategory(category)}
+              >
+                {t(FOOD_CATEGORY_LABEL_KEYS[category])}
+              </button>
+            ))}
+          </div>
+
+          <div className="food-picker__meta">
+            <span>
+              {t('addFood.foodCount', { n: pickerFoods.length })}
+            </span>
+            <span>{t('addFood.per100Label')}</span>
+          </div>
+
+          <div className="food-pick-list">
+            {pickerFoods.map((food) => {
+              const categoryLabel = t(
+                FOOD_CATEGORY_LABEL_KEYS[food.category],
+              );
+              return (
+                <button
+                  type="button"
+                  key={food.id}
+                  className="food-pick-row"
+                  onClick={() => {
+                    updateRow(pickingRowKey, {
+                      foodId: food.id,
+                    });
+                    setPickingRowKey(null);
+                  }}
+                >
+                  <span
+                    className={`food-pick-row__badge food-pick-row__badge--${food.category}`}
+                    aria-hidden="true"
+                  >
+                    {categoryLabel.slice(0, 1)}
+                  </span>
+                  <span className="food-pick-row__main">
+                    <strong>{getFoodDisplayName(food, locale)}</strong>
+                    <small>
+                      {categoryLabel} ·{' '}
+                      {t(FOOD_BASIS_LABEL_KEYS[food.basis])}
+                    </small>
+                  </span>
+                  <span className="food-pick-row__kcal">
+                    {formatKcal(food.nutritionPer100g.kcal)}
+                    <small>{t('common.kcal')}</small>
+                  </span>
+                  <ChevronRight size={17} aria-hidden="true" />
+                </button>
+              );
+            })}
+
+            {pickerFoods.length === 0 && (
+              <div className="picker-empty">
+                <p>{t('addFood.noResults')}</p>
+                <small>{t('addFood.noResultsHint')}</small>
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
       <form
         id="create-batch-form"
         className="meal-prep-form"
@@ -263,26 +441,32 @@ export function CreateBatchModal({
             <div className="field">
               <span className="field-label">{t('batch.components')}</span>
               <div className="meal-prep-components">
-                {rows.map((row, index) => (
+                {rows.map((row, index) => {
+                  const selectedFood = candidates.find(
+                    (food) => food.id === row.foodId,
+                  );
+                  return (
                   <div className="meal-prep-component-row" key={row.key}>
-                    <select
-                      value={row.foodId}
-                      onChange={(event) =>
-                        updateRow(row.key, {
-                          foodId: event.target.value,
-                        })
-                      }
+                    <button
+                      type="button"
+                      className="meal-prep-component-food"
+                      onClick={() => {
+                        setPickingRowKey(row.key);
+                        setPickerSearch('');
+                        setPickerCategory('all');
+                      }}
                       aria-label={t('batch.componentFoodAria', {
                         index: index + 1,
                       })}
                       disabled={isBusy}
                     >
-                      {candidates.map((food) => (
-                        <option key={food.id} value={food.id}>
-                          {getFoodDisplayName(food, locale)}
-                        </option>
-                      ))}
-                    </select>
+                      <span>
+                        {selectedFood
+                          ? getFoodDisplayName(selectedFood, locale)
+                          : t('batch.chooseComponent')}
+                      </span>
+                      <ChevronDown size={14} aria-hidden="true" />
+                    </button>
                     <label className="meal-prep-component-grams">
                       <input
                         type="number"
@@ -315,7 +499,8 @@ export function CreateBatchModal({
                       <Trash2 size={14} aria-hidden="true" />
                     </button>
                   </div>
-                ))}
+                  );
+                })}
               </div>
               <Button
                 variant="ghost"
@@ -383,6 +568,7 @@ export function CreateBatchModal({
           </>
         )}
       </form>
+      )}
     </Modal>
   );
 }

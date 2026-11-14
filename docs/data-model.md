@@ -69,6 +69,7 @@ interface FoodEntry {
   id: string;
   foodId: string;
   foodNames: LocalizedText; // 名称快照
+  batchComponents?: { names: LocalizedText; totalGrams: number }[];
   amountGrams: number;
   enteredQuantity: number;
   enteredUnit: 'g' | 'serving';

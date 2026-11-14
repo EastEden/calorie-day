@@ -683,9 +683,32 @@
   gap: 6px;
 }
 
-.meal-prep-component-row select {
+.meal-prep-component-food {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
   width: 100%;
   min-width: 0;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 12px;
+  text-align: left;
+}
+
+.meal-prep-component-food span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meal-prep-component-food svg {
+  flex: none;
+  color: var(--muted);
 }
 
 .meal-prep-component-grams {

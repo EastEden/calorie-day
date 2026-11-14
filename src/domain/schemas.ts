@@ -202,6 +202,15 @@ export const foodEntrySchema = z
     id: z.string().min(1).max(120),
     foodId: z.string().min(1).max(120),
     foodNames: localizedTextSchema,
+    batchComponents: z
+      .array(
+        z.object({
+          names: localizedTextSchema,
+          totalGrams: finiteNumber.positive().max(100_000),
+        }),
+      )
+      .max(50)
+      .optional(),
     amountGrams: finiteNumber.positive().max(100_000),
     enteredQuantity: finiteNumber.positive().max(100_000),
     enteredUnit: z.enum(['g', 'serving']),
