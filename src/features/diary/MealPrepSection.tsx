@@ -26,9 +26,6 @@ export function MealPrepSection() {
   const [expanded, setExpanded] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [recordingBatch, setRecordingBatch] = useState<Food | null>(null);
-  const [confirmDisposeId, setConfirmDisposeId] = useState<string | null>(
-    null,
-  );
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(
     null,
   );
@@ -73,8 +70,6 @@ export function MealPrepSection() {
           : t('batch.disposeError'),
         'error',
       );
-    } finally {
-      setConfirmDisposeId(null);
     }
   };
 
@@ -209,10 +204,7 @@ export function MealPrepSection() {
                     <button
                       type="button"
                       className="icon-button meal-prep-row__delete"
-                      onClick={() => {
-                        setConfirmDisposeId(null);
-                        setConfirmDeleteId(batch.id);
-                      }}
+                      onClick={() => setConfirmDeleteId(batch.id)}
                       aria-label={t('batch.deleteAria', {
                         name: getFoodDisplayName(batch, locale),
                       })}
@@ -234,40 +226,19 @@ export function MealPrepSection() {
                     </strong>
                   </div>
                   <div className="meal-prep-row__actions">
-                      {confirmDisposeId === batch.id ? (
-                        <>
-                          <Button
-                            variant="danger"
-                            size="sm"
-                            onClick={() => void handleDispose(batch)}
-                            disabled={isSaving}
-                            title={t('batch.disposeConfirm')}
-                          >
-                            {t('batch.disposeConfirmAction')}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setConfirmDisposeId(null)}
-                            disabled={isSaving}
-                          >
-                            {t('common.cancel')}
-                          </Button>
-                        </>
-                      ) : (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="meal-prep-row__dispose"
-                          onClick={() => {
-                            setConfirmDeleteId(null);
-                            setConfirmDisposeId(batch.id);
-                          }}
-                          disabled={isSaving}
-                        >
-                          {t('batch.dispose')}
-                        </Button>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="meal-prep-row__dispose"
+                        onClick={() => {
+                          setConfirmDeleteId(null);
+                          void handleDispose(batch);
+                        }}
+                        disabled={isSaving}
+                        title={t('batch.disposeConfirm')}
+                      >
+                        {t('batch.dispose')}
+                      </Button>
                       <Button
                         size="sm"
                         onClick={() => setRecordingBatch(batch)}
