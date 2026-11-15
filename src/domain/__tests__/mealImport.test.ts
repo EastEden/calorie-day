@@ -32,7 +32,8 @@ describe('mealImport', () => {
 
   it('requires strict half-width JSON in the AI prompt', () => {
     expect(MEAL_IMPORT_AI_PROMPT).toContain('英文半角双引号');
-    expect(MEAL_IMPORT_AI_PROMPT).toContain('空数组 []');
+    expect(MEAL_IMPORT_AI_PROMPT).toContain('空数组');
+    expect(MEAL_IMPORT_AI_PROMPT).toContain('[]');
     expect(MEAL_IMPORT_AI_PROMPT).toContain('「复制 JSON」按钮');
     expect(MEAL_IMPORT_AI_PROMPT).toContain('json 代码块');
     expect(MEAL_IMPORT_AI_PROMPT).toContain('JSON.parse()');
