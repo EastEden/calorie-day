@@ -158,14 +158,15 @@ export function MealPrepSection() {
             const portions =
               meta.portions ??
               Math.max(1, Math.round(meta.totalGrams / meta.portionGrams));
-            const componentText = meta.components
-              ?.map(
+            const componentLabels =
+              meta.components?.map(
                 (component) =>
                   `${resolveLocalizedText(component.names, locale)} ${formatDecimal(
                     component.totalGrams,
                   )}g`,
-              )
-              .join(' · ');
+              ) ?? [];
+            const shownComponents = componentLabels.slice(0, 3);
+            const fullComponentText = componentLabels.join(' · ');
 
             return (
               <article className="meal-prep-row" key={batch.id}>
@@ -178,9 +179,21 @@ export function MealPrepSection() {
                         portions,
                       })}
                     </small>
-                    {componentText && (
-                      <small className="meal-prep-row__components">
-                        {componentText}
+                    {shownComponents.length > 0 && (
+                      <small
+                        className="meal-prep-row__components"
+                        title={fullComponentText}
+                      >
+                        <span className="meal-prep-row__component-list">
+                          {shownComponents.join(' · ')}
+                        </span>
+                        {componentLabels.length > shownComponents.length && (
+                          <span className="meal-prep-row__component-more">
+                            {t('batch.componentsMore', {
+                              n: componentLabels.length,
+                            })}
+                          </span>
+                        )}
                       </small>
                     )}
                   </div>

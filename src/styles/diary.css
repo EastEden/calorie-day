@@ -590,10 +590,15 @@
 
 .meal-prep-list {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
+  min-width: 0;
 }
 
 .meal-prep-row {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
   padding: 13px 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
@@ -606,13 +611,16 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  min-width: 0;
 }
 
 .meal-prep-row__title {
   display: flex;
+  flex: 1;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
+  overflow: hidden;
 }
 
 .meal-prep-row__title strong {
@@ -645,11 +653,28 @@
 }
 
 .meal-prep-row__components {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  width: 100%;
+  min-width: 0;
   overflow: hidden;
   margin-top: 2px;
   color: var(--muted-soft);
   font-size: 9.5px;
+}
+
+.meal-prep-row__component-list {
+  min-width: 0;
+  overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meal-prep-row__component-more {
+  flex: none;
+  color: var(--green);
+  font-weight: 680;
   white-space: nowrap;
 }
 
@@ -673,7 +698,10 @@
 .meal-prep-components {
   display: grid;
   gap: 7px;
+  max-height: 300px;
   margin-bottom: 8px;
+  overflow-y: auto;
+  padding-right: 2px;
 }
 
 .meal-prep-component-row {

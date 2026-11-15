@@ -411,6 +411,8 @@
   color: #8c958d;
   font-size: 7.5px;
   font-weight: 400;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .share-entry__amount {
