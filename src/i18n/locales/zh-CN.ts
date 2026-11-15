@@ -325,7 +325,28 @@ export const zhCN = {
   'toast.batchDeleted': '备餐已删除。',
   'toast.batchDisposed': '剩余已吃完，不计入摄入。',
   'toast.mealAddedForDate': '已加入{{date}} {{meal}}',
+  'toast.mealsImported': '已导入 {{days}} 天、{{entries}} 条饮食记录。',
   'toast.recordChanged': '记录已在其他页面更新，请刷新后重试。',
+
+  // Meal JSON import
+  'mealImport.open': '导入记录',
+  'mealImport.title': '导入饮食记录',
+  'mealImport.description':
+    '把其他 AI 工具识别出的单天/多天饮食 JSON 导入，会合并到对应餐次。',
+  'mealImport.promptTitle': '复制提示词给 AI',
+  'mealImport.copyPrompt': '复制提示词',
+  'mealImport.copied': '已复制',
+  'mealImport.copyFailed': '复制失败，请在提示词框中全选手动复制。',
+  'mealImport.pasteTitle': '粘贴 AI 输出的 JSON',
+  'mealImport.pastePlaceholder': '把 AI 生成的 JSON 粘贴到这里…',
+  'mealImport.validate': '校验并预览',
+  'mealImport.confirm': '确认导入',
+  'mealImport.previewTitle': '导入预览',
+  'mealImport.summaryDays': '{{n}} 天',
+  'mealImport.summaryEntries': '{{n}} 条记录',
+  'mealImport.summaryKcal': '约 {{kcal}} kcal',
+  'mealImport.previewHint':
+    '确认后会按餐次追加到对应日期，不会覆盖已有记录。',
 
   // Entry editor
   'entry.title': '编辑记录',

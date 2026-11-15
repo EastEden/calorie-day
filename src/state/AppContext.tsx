@@ -18,6 +18,7 @@ import { backupPayloadSchema } from '../domain/backup';
 import {
   FOOD_CATEGORIES,
   MEAL_META,
+  MEAL_TYPES,
 } from '../domain/constants';
 import { getCurrentLocale, translate } from '../i18n';
 import {
@@ -48,6 +49,10 @@ import {
   userProfileSchema,
 } from '../domain/schemas';
 import { resolveTargets } from '../domain/targets';
+import type {
+  MealImportPayload,
+  MealImportResult,
+} from '../domain/mealImport';
 import type {
   BackupImportResult,
   BackupPayload,
@@ -99,6 +104,7 @@ interface AppActions {
     amount: EntryAmountInput,
   ) => Promise<boolean>;
   disposeMealPrepBatch: (batch: Food) => Promise<void>;
+  importMealLogs: (payload: MealImportPayload) => Promise<MealImportResult>;
   updateEntry: (
     mealType: MealType,
     entryId: string,
@@ -688,6 +694,75 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [showToast],
   );
 
+  const importMealLogs = useCallback(
+    async (payload: MealImportPayload): Promise<MealImportResult> => {
+      if (savingRef.current) {
+        throw new Error(translate('toast.saveInProgress'));
+      }
+
+      savingRef.current = true;
+      setIsSaving(true);
+
+      try {
+        const now = nowIsoTimestamp();
+        const days: DailyLog[] = payload.days.map((day) => {
+          const log = createEmptyDailyLog(day.date);
+          const isFuture = day.date > getTodayIso();
+          log.targetSnapshot = isFuture ? null : targets;
+          log.weightKgSnapshot = isFuture
+            ? null
+            : profile?.weightKg ?? null;
+
+          for (const mealType of MEAL_TYPES) {
+            for (const entry of day.meals[mealType]) {
+              const food: Food = {
+                id: createId('food'),
+                names: { 'zh-CN': entry.name },
+                category: 'other',
+                basis: 'as_sold',
+                nutritionPer100g: scaleNutrition(
+                  entry.nutrition,
+                  100 / entry.amountGrams,
+                ),
+                servings: [],
+                source: 'imported',
+                createdAt: now,
+                updatedAt: now,
+              };
+              log.meals[mealType].push(
+                createFoodEntry(food, {
+                  grams: entry.amountGrams,
+                  enteredQuantity: entry.amountGrams,
+                  enteredUnit: 'g',
+                }),
+              );
+            }
+          }
+
+          return log;
+        });
+
+        const result = await repository.mergeImportedMeals(days);
+        setLogReloadToken((value) => value + 1);
+        void refreshFoodUsage();
+        showToast(
+          translate('toast.mealsImported', {
+            days: result.daysImported,
+            entries: result.entriesImported,
+          }),
+        );
+        return result;
+      } catch (error) {
+        showToast(errorMessage(error), 'error');
+        throw error;
+      } finally {
+        savingRef.current = false;
+        setIsSaving(false);
+      }
+    },
+    [profile?.weightKg, refreshFoodUsage, showToast, targets],
+  );
+
   const updateEntry = useCallback(
     async (
       mealType: MealType,
@@ -1024,6 +1099,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addEntry,
       addEntryForDate,
       disposeMealPrepBatch,
+      importMealLogs,
       updateEntry,
       deleteEntry,
       createMealPrepBatch,
@@ -1047,6 +1123,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       addEntry,
       addEntryForDate,
       disposeMealPrepBatch,
+      importMealLogs,
       updateEntry,
       deleteEntry,
       createMealPrepBatch,

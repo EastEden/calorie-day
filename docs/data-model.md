@@ -259,6 +259,17 @@ interface BackupImportResult {
 按日期保留已有日志，已有个人资料和目标设置不被覆盖。导出范围只影响 `logs`；`foods`
 始终是完整食物库。
 
+### 5.1 饮食记录 JSON 导入
+
+面向“其他 AI 工具拍照识图 / 记录后导入”的场景，使用独立格式
+[`meal-import.schema.json`](meal-import.schema.json)：
+
+- `schemaVersion: 1`，顶层为 `days` 数组，每天包含 `date` 和四餐 `meals`。
+- 每条记录包含 `name`、`amountGrams` 和本次摄入总量的 `nutrition`。
+- 营养按总量填写；导入时换算为 `nutritionPer100gSnapshot` 写入记录快照。
+- 不创建食物库条目，只写入对应日期的饮食记录；同一天按餐次追加合并。
+- 导入弹窗内置一段可复制的 AI 提示词，指导外部 AI 输出该格式；涉及多天时，提示词要求 AI 先向用户确认日期范围，再输出 JSON。
+
 ## 6. 未来 API 映射建议
 
 ```text
