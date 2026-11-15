@@ -25,17 +25,18 @@ const breakfast = {
 
 describe('mealImport', () => {
   it('asks the AI to confirm the range before multi-day output', () => {
-    expect(MEAL_IMPORT_AI_PROMPT).toContain('先不要输出 JSON');
-    expect(MEAL_IMPORT_AI_PROMPT).toContain('日期范围');
+    expect(MEAL_IMPORT_AI_PROMPT).toContain('确认日期范围');
     expect(MEAL_IMPORT_AI_PROMPT).toContain('单天记录');
+    expect(MEAL_IMPORT_AI_PROMPT).toContain('用户本地今天');
   });
 
-  it('requires strict half-width JSON in the AI prompt', () => {
+  it('requires strict compact JSON code block output', () => {
     expect(MEAL_IMPORT_AI_PROMPT).toContain('英文半角双引号');
-    expect(MEAL_IMPORT_AI_PROMPT).toContain('空数组');
     expect(MEAL_IMPORT_AI_PROMPT).toContain('[]');
-    expect(MEAL_IMPORT_AI_PROMPT).toContain('「复制 JSON」按钮');
+    expect(MEAL_IMPORT_AI_PROMPT).toContain('只输出一个');
+    expect(MEAL_IMPORT_AI_PROMPT).toContain('紧凑单行');
     expect(MEAL_IMPORT_AI_PROMPT).toContain('json 代码块');
+    expect(MEAL_IMPORT_AI_PROMPT).toContain('```json');
     expect(MEAL_IMPORT_AI_PROMPT).toContain('JSON.parse()');
   });
 

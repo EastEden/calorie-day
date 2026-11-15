@@ -147,53 +147,25 @@ export function parseMealImportJson(
   return { success: true, data: result.data as MealImportPayload };
 }
 
-export const MEAL_IMPORT_AI_PROMPT = `你是一名饮食记录整理助手。请把识别到的每一餐整理成可以直接粘贴到「每日热量」App 的 JSON。
+export const MEAL_IMPORT_AI_PROMPT = `请把你识别到的每一餐，按以下 JSON 格式输出。
 
-# 输出范围
-- 单天记录：直接生成 JSON。
-- 多天记录：先不要输出 JSON，先用一句话向用户确认要导出的日期范围（例如 2026-11-14 到 2026-11-15，或具体哪几天）。用户确认后，只输出该范围内的数据。
+流程：
+- 用户未提供日期且只有单天记录时，使用用户本地今天，直接输出 JSON。
+- 多天记录或日期不明确时，先用一句话确认日期范围，确认后只输出该范围内的 JSON。
 
-# JSON 格式
-{
-  "schemaVersion": 1,
-  "days": [
-    {
-      "date": "2026-11-15",
-      "meals": {
-        "breakfast": [
-          {
-            "name": "水煮蛋",
-            "amountGrams": 50,
-            "nutrition": {
-              "kcal": 72,
-              "proteinG": 6.3,
-              "carbsG": 0.4,
-              "fatG": 4.8
-            }
-          }
-        ],
-        "lunch": [],
-        "dinner": [],
-        "snack": []
-      }
-    }
-  ]
-}
+格式规则：
+1. 最外层："schemaVersion": 1 和 "days" 数组。
+2. 每天一个对象："date"（YYYY-MM-DD）和 "meals"。
+3. "meals" 固定四个键：breakfast、lunch、dinner、snack；没有的餐写 []。
+4. 每条食物："name"（简短名称）、"amountGrams"、"nutrition"。
+5. "nutrition" 含 kcal、proteinG、carbsG、fatG，均为数字，表示本次摄入总量（不是每100g），最多保留一位小数。
+6. 不确定的食物或份量，按标准份量合理估算。
+7. 饮品中的添加物（牛奶、糖等）单独列为一项。
 
-字段说明：
-- days：每天一个对象，按日期从早到晚排列。
-- meals：必须包含 breakfast（早餐）、lunch（午餐）、dinner（晚餐）、snack（加餐）四个键；没有记录的餐写 []。
-- name：食物名称，尽量简短；不确定的食物给出合理估算。
-- amountGrams：本次摄入克数。
-- nutrition：本次摄入量的总营养，不是每 100g；包含 kcal、proteinG、carbsG、fatG 四个数字字段。
+输出要求：
+- 只输出一个 \`\`\`json 代码块，块内是完整、紧凑单行的 JSON，可直接被 JSON.parse() 解析。
+- 键和字符串只用英文半角双引号，不转义 [ ] { }。
+- 代码块外不写任何解释、注释或引用块。
 
-格式要求：
-- 输出标准合法 JSON，可直接使用 JSON.parse() 解析。
-- 键和字符串只能使用英文半角双引号 "；禁止中文弯引号。
-- 空数组必须完整写为 []，不能省略。
-- 不得对 [ ] { } 等字符做 Markdown 转义；不要注释、引用块或额外说明。
-
-# 复制方式
-- 如果界面支持独立「复制 JSON」按钮，优先使用，并确保复制的是完整原始 JSON。
-- 如果不支持，则输出一个 Markdown 的 json 代码块（三个反引号加 json），代码块内只放完整 JSON，方便使用聊天工具自带的复制按钮。
-- 不要模拟无法使用的按钮，也不要在复制内容中混入 Markdown、HTML 或排版文本。`;
+示例：
+{"schemaVersion":1,"days":[{"date":"2026-11-15","meals":{"breakfast":[{"name":"水煮蛋","amountGrams":50,"nutrition":{"kcal":72,"proteinG":6.3,"carbsG":0.4,"fatG":4.8}}],"lunch":[],"dinner":[],"snack":[]}}]}`;
