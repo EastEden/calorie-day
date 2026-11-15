@@ -7,6 +7,7 @@ import { Check, ClipboardCopy } from 'lucide-react';
 import {
   MEAL_IMPORT_AI_PROMPT,
   parseMealImportJson,
+  repairMealImportJson,
   type MealImportPayload,
 } from '../../domain/mealImport';
 import { MEAL_META, MEAL_TYPES } from '../../domain/constants';
@@ -68,6 +69,7 @@ export function MealImportModal({
   const [parsed, setParsed] = useState<MealImportPayload | null>(null);
   const [errors, setErrors] = useState<string[]>([]);
   const [copied, setCopied] = useState(false);
+  const [repaired, setRepaired] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -78,6 +80,7 @@ export function MealImportModal({
     setParsed(null);
     setErrors([]);
     setCopied(false);
+    setRepaired(false);
     setSubmitting(false);
   }, [open]);
 
@@ -122,6 +125,28 @@ export function MealImportModal({
 
     setParsed(result.data);
     setErrors([]);
+    setRepaired(false);
+  };
+
+  const handleRepair = () => {
+    const repairedText = repairMealImportJson(text);
+    const result = parseMealImportJson(repairedText);
+
+    setText(repairedText);
+
+    if (!result.success) {
+      setParsed(null);
+      setRepaired(false);
+      setErrors([
+        t('mealImport.repairFailed'),
+        ...result.errors,
+      ]);
+      return;
+    }
+
+    setParsed(result.data);
+    setErrors([]);
+    setRepaired(true);
   };
 
   const handleImport = async () => {
@@ -219,12 +244,31 @@ export function MealImportModal({
               setText(event.target.value);
               setParsed(null);
               setErrors([]);
+              setRepaired(false);
             }}
             placeholder={t('mealImport.pastePlaceholder')}
             rows={10}
             spellCheck={false}
             disabled={isBusy}
           />
+          <div className="meal-import__repair">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleRepair}
+              disabled={isBusy || text.trim().length === 0}
+            >
+              {t('mealImport.repair')}
+            </Button>
+            <span className="field-hint">
+              {t('mealImport.repairHint')}
+            </span>
+          </div>
+          {repaired && (
+            <p className="meal-import__repaired" role="status">
+              {t('mealImport.repaired')}
+            </p>
+          )}
         </section>
 
         {errors.length > 0 && (

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MEAL_IMPORT_AI_PROMPT,
   parseMealImportJson,
+  repairMealImportJson,
 } from '../mealImport';
 
 function makePayload(days: unknown[]) {
@@ -27,6 +28,28 @@ describe('mealImport', () => {
     expect(MEAL_IMPORT_AI_PROMPT).toContain('先不要输出 JSON');
     expect(MEAL_IMPORT_AI_PROMPT).toContain('日期范围');
     expect(MEAL_IMPORT_AI_PROMPT).toContain('单天记录');
+  });
+
+  it('requires strict half-width JSON in the AI prompt', () => {
+    expect(MEAL_IMPORT_AI_PROMPT).toContain('英文半角双引号');
+    expect(MEAL_IMPORT_AI_PROMPT).toContain('空数组 []');
+  });
+
+  it('repairs common AI formatting mistakes', () => {
+    const raw = `\`\`\`json
+{ “schemaVersion”: 1, “days”: \\[ { "date": "2026-11-15", "meals": { "breakfast": \\[ { "name": "鸡肉麦满分", "amountGrams": 160, "nutrition": { "kcal": 360, "proteinG": 17, "carbsG": 38, "fatG": 16 } } \\], “lunch”: , “dinner”: , “snack”: } } ] }
+\`\`\``;
+
+    const repaired = repairMealImportJson(raw);
+    const result = parseMealImportJson(repaired);
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.days[0]?.meals.breakfast).toHaveLength(1);
+      expect(result.data.days[0]?.meals.lunch).toEqual([]);
+      expect(result.data.days[0]?.meals.dinner).toEqual([]);
+      expect(result.data.days[0]?.meals.snack).toEqual([]);
+    }
   });
 
   it('parses a single day with multiple meals', () => {

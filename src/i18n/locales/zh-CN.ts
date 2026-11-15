@@ -340,6 +340,13 @@ export const zhCN = {
   'mealImport.pasteTitle': '粘贴 AI 输出的 JSON',
   'mealImport.pastePlaceholder': '把 AI 生成的 JSON 粘贴到这里…',
   'mealImport.validate': '校验并预览',
+  'mealImport.repair': '尝试修复并校验',
+  'mealImport.repairHint':
+    '可修正常见格式问题：中文引号、Markdown 代码块、转义括号、缺失的空餐次。',
+  'mealImport.repaired':
+    '已修复常见格式问题并通过校验，请检查预览。',
+  'mealImport.repairFailed':
+    '自动修复后仍未通过校验：',
   'mealImport.confirm': '确认导入',
   'mealImport.previewTitle': '导入预览',
   'mealImport.summaryDays': '{{n}} 天',

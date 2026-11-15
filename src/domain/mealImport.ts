@@ -95,6 +95,38 @@ export interface MealImportParseFailure {
   errors: string[];
 }
 
+/**
+ * Repairs common formatting mistakes from AI output without changing valid
+ * meal data: Markdown fences, surrounding prose, smart quotes, escaped
+ * brackets, trailing commas and missing empty meal arrays.
+ */
+export function repairMealImportJson(raw: string): string {
+  let text = raw.replace(/^\uFEFF/, '').trim();
+
+  text = text.replace(/```(?:json)?/gi, '');
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start >= 0 && end > start) {
+    text = text.slice(start, end + 1);
+  }
+
+  text = text
+    .replace(/[“”„‟]/g, '"')
+    .replace(/\\\[/g, '[')
+    .replace(/\\\]/g, ']')
+    .replace(/\\\{/g, '{')
+    .replace(/\\\}/g, '}')
+    .replace(/\u00a0/g, ' ');
+
+  text = text.replace(
+    /("(?:breakfast|lunch|dinner|snack)")\s*:\s*(?=[,}])/g,
+    '$1: []',
+  );
+  text = text.replace(/,\s*([}\]])/g, '$1');
+
+  return text.trim();
+}
+
 export function parseMealImportJson(
   raw: string,
 ): MealImportParseSuccess | MealImportParseFailure {
@@ -117,7 +149,7 @@ export function parseMealImportJson(
 
 export const MEAL_IMPORT_AI_PROMPT = `请把你识别到的每一餐，按下面的 JSON 格式输出。
 如果识别结果涉及多天记录，请先不要输出 JSON：先用一句话向用户确认要导出的日期范围（例如“2026-11-14 到 2026-11-15”或具体哪几天）。等用户明确确认后，再只输出确认范围内的 JSON。
-如果是单天记录，可以直接输出 JSON。最终输出时不要解释、不要用代码块，只输出 JSON 本身。
+如果是单天记录，可以直接输出 JSON。最终输出时不要解释、不要用代码块，只输出严格合法的 JSON 本身。
 
 规则：
 1. 多天记录必须先确认日期范围，再输出 JSON。
@@ -127,6 +159,7 @@ export const MEAL_IMPORT_AI_PROMPT = `请把你识别到的每一餐，按下面
 5. 每条食物包含 "name"（食物名称）、"amountGrams"（克数）、"nutrition"（本次摄入量的总营养）。
 6. nutrition 的四个字段：kcal（热量）、proteinG（蛋白质克）、carbsG（碳水克）、fatG（脂肪克）。都是数字，按本次克数计算总量，而不是每100g。
 7. 不认识或不确定的食物也要给出合理估算，名称尽量简短。
+8. 必须输出严格合法的 JSON：键和字符串只能使用英文半角双引号 "，不要使用中文引号；数组直接写 [ ]，不要写成带反斜杠的方括号；没有的餐必须写空数组 []；不要输出 Markdown 代码块、注释或额外说明。
 
 示例：
 {
