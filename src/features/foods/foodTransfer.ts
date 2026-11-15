@@ -137,19 +137,20 @@ export function buildFoodExportPayload(foods: Food[]): {
   return {
     schemaVersion: 1,
     exportedAt: nowIsoTimestamp(),
-    foods: foods.map((food) => ({
-      id: food.id,
-      names: { ...food.names },
-      category: food.category,
-      basis: food.basis,
-      nutritionPer100g: { ...food.nutritionPer100g },
-      servings: food.servings.map((serving) => ({
-        id: serving.id,
-        label: serving.label,
-        grams: serving.grams,
+    foods: foods
+      .filter((food) => !food.batch)
+      .map((food) => ({
+        id: food.id,
+        names: { ...food.names },
+        category: food.category,
+        basis: food.basis,
+        nutritionPer100g: { ...food.nutritionPer100g },
+        servings: food.servings.map((serving) => ({
+          id: serving.id,
+          label: serving.label,
+          grams: serving.grams,
+        })),
       })),
-      ...(food.batch ? { batch: { ...food.batch } } : {}),
-    })),
   };
 }
 
