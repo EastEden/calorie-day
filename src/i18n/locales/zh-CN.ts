@@ -336,7 +336,7 @@ export const zhCN = {
   'mealImport.promptTitle': '复制提示词给 AI',
   'mealImport.copyPrompt': '复制提示词',
   'mealImport.copied': '已复制',
-  'mealImport.copyFailed': '复制失败，请手动复制。',
+  'mealImport.copyFailed': '复制失败，请在提示词框中全选手动复制。',
   'mealImport.pasteTitle': '粘贴 AI 输出的 JSON',
   'mealImport.pastePlaceholder': '把 AI 生成的 JSON 粘贴到这里…',
   'mealImport.validate': '校验并预览',
@@ -345,6 +345,8 @@ export const zhCN = {
   'mealImport.summaryDays': '{{n}} 天',
   'mealImport.summaryEntries': '{{n}} 条记录',
   'mealImport.summaryKcal': '约 {{kcal}} kcal',
+  'mealImport.previewHint':
+    '确认后会按餐次追加到对应日期，不会覆盖已有记录。',
 
   // Entry editor
   'entry.title': '编辑记录',

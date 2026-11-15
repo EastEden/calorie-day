@@ -9,7 +9,12 @@ import {
   parseMealImportJson,
   type MealImportPayload,
 } from '../../domain/mealImport';
-import { formatKcal } from '../../domain/formatters';
+import { MEAL_META, MEAL_TYPES } from '../../domain/constants';
+import { formatShortDate } from '../../domain/dates';
+import {
+  formatDecimal,
+  formatKcal,
+} from '../../domain/formatters';
 import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { Button } from '../../ui/Button';
@@ -22,19 +27,34 @@ interface MealImportModalProps {
 }
 
 async function copyText(text: string): Promise<void> {
-  if (navigator.clipboard?.writeText) {
-    await navigator.clipboard.writeText(text);
-    return;
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+  } catch {
+    // Fall through to the selection-based copy path.
   }
 
   const textarea = document.createElement('textarea');
   textarea.value = text;
+  textarea.setAttribute('readonly', '');
   textarea.style.position = 'fixed';
+  textarea.style.left = '-9999px';
+  textarea.style.top = '0';
   textarea.style.opacity = '0';
   document.body.appendChild(textarea);
-  textarea.select();
-  document.execCommand('copy');
-  document.body.removeChild(textarea);
+
+  try {
+    textarea.focus();
+    textarea.select();
+    textarea.setSelectionRange(0, text.length);
+    if (!document.execCommand('copy')) {
+      throw new Error('execCommand copy failed');
+    }
+  } finally {
+    document.body.removeChild(textarea);
+  }
 }
 
 export function MealImportModal({
@@ -178,9 +198,15 @@ export function MealImportModal({
                 : t('mealImport.copyPrompt')}
             </Button>
           </div>
-          <pre className="meal-import__prompt-text">
-            {MEAL_IMPORT_AI_PROMPT}
-          </pre>
+          <textarea
+            className="meal-import__prompt-text"
+            value={MEAL_IMPORT_AI_PROMPT}
+            readOnly
+            rows={10}
+            spellCheck={false}
+            aria-label={t('mealImport.promptTitle')}
+            onFocus={(event) => event.currentTarget.select()}
+          />
         </section>
 
         <section className="meal-import__input">
@@ -211,18 +237,82 @@ export function MealImportModal({
 
         {parsed && summary && (
           <div className="meal-import__preview">
-            <strong>{t('mealImport.previewTitle')}</strong>
-            <span>{t('mealImport.summaryDays', { n: summary.days })}</span>
-            <span>
-              {t('mealImport.summaryEntries', {
-                n: summary.entries,
+            <div className="meal-import__preview-header">
+              <strong>{t('mealImport.previewTitle')}</strong>
+              <span>
+                {t('mealImport.summaryDays', { n: summary.days })} ·{' '}
+                {t('mealImport.summaryEntries', {
+                  n: summary.entries,
+                })}{' '}
+                ·{' '}
+                {t('mealImport.summaryKcal', {
+                  kcal: formatKcal(summary.kcal),
+                })}
+              </span>
+            </div>
+
+            <div className="meal-import__preview-days">
+              {parsed.days.map((day) => {
+                const dayKcal = MEAL_TYPES.reduce(
+                  (total, mealType) =>
+                    total +
+                    day.meals[mealType].reduce(
+                      (sum, entry) => sum + entry.nutrition.kcal,
+                      0,
+                    ),
+                  0,
+                );
+
+                return (
+                  <section
+                    className="meal-import__preview-day"
+                    key={day.date}
+                  >
+                    <header>
+                      <strong>{formatShortDate(day.date)}</strong>
+                      <span>{formatKcal(dayKcal)} kcal</span>
+                    </header>
+
+                    {MEAL_TYPES.map((mealType) => {
+                      const entries = day.meals[mealType];
+                      if (entries.length === 0) {
+                        return null;
+                      }
+
+                      return (
+                        <div
+                          className="meal-import__preview-meal"
+                          key={mealType}
+                        >
+                          <span className="meal-import__preview-meal-label">
+                            {t(MEAL_META[mealType].labelKey)}
+                          </span>
+                          <ul>
+                            {entries.map((entry, index) => (
+                              <li key={`${entry.name}-${index}`}>
+                                <span className="meal-import__preview-name">
+                                  {entry.name}
+                                </span>
+                                <span className="meal-import__preview-amount">
+                                  {formatDecimal(entry.amountGrams)}g
+                                </span>
+                                <strong>
+                                  {formatKcal(entry.nutrition.kcal)} kcal
+                                </strong>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                  </section>
+                );
               })}
-            </span>
-            <span>
-              {t('mealImport.summaryKcal', {
-                kcal: formatKcal(summary.kcal),
-              })}
-            </span>
+            </div>
+
+            <p className="meal-import__preview-hint">
+              {t('mealImport.previewHint')}
+            </p>
           </div>
         )}
       </div>
