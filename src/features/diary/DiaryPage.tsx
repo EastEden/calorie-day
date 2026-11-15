@@ -1,5 +1,9 @@
 import { useEffect, useState } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import {
+  AlertTriangle,
+  FileJson,
+  RefreshCw,
+} from 'lucide-react';
 import type { FoodEntry, MealType } from '../../domain/types';
 import { MEAL_TYPES } from '../../domain/constants';
 import { useI18n } from '../../i18n';
@@ -12,6 +16,7 @@ import { DayToolbar } from './DayToolbar';
 import { EntryEditorModal } from './EntryEditorModal';
 import { MacroOverview } from './MacroOverview';
 import { MealCard } from './MealCard';
+import { MealImportModal } from './MealImportModal';
 import { MealPrepSection } from './MealPrepSection';
 import { QuickCoffeeModal } from './QuickCoffeeModal';
 import { QuickOilModal } from './QuickOilModal';
@@ -57,12 +62,14 @@ export function DiaryPage({ onShare }: DiaryPageProps) {
   const [quickCoffeeOpen, setQuickCoffeeOpen] = useState(false);
   const [quickOilMeal, setQuickOilMeal] = useState<MealType | null>(null);
   const [editing, setEditing] = useState<EditingEntry | null>(null);
+  const [mealImportOpen, setMealImportOpen] = useState(false);
 
   useEffect(() => {
     setAddMeal(null);
     setQuickCoffeeOpen(false);
     setQuickOilMeal(null);
     setEditing(null);
+    setMealImportOpen(false);
   }, [selectedDate]);
 
   const contentReady = !isLogLoading && !logError && currentLog !== null;
@@ -115,9 +122,20 @@ export function DiaryPage({ onShare }: DiaryPageProps) {
                 <p className="eyebrow">{t('meals.eyebrow')}</p>
                 <h2 id="meals-title">{t('meals.title')}</h2>
               </div>
-              <span className="section-heading__hint">
-                {t('diary.recordsCount', { n: summary.entryCount })}
-              </span>
+              <div className="section-heading__meta">
+                <span className="section-heading__hint">
+                  {t('diary.recordsCount', { n: summary.entryCount })}
+                </span>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<FileJson size={15} />}
+                  onClick={() => setMealImportOpen(true)}
+                  disabled={mealsDisabled}
+                >
+                  {t('mealImport.open')}
+                </Button>
+              </div>
             </div>
 
             <MealPrepSection />
@@ -168,6 +186,11 @@ export function DiaryPage({ onShare }: DiaryPageProps) {
         mealType={editing?.mealType ?? 'breakfast'}
         entry={editing?.entry ?? null}
         onClose={() => setEditing(null)}
+      />
+
+      <MealImportModal
+        open={mealImportOpen}
+        onClose={() => setMealImportOpen(false)}
       />
 
       <p className="diary-footnote">{t('diary.footnote')}</p>

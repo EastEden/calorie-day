@@ -358,6 +358,53 @@ describe('IndexedDbRepository', () => {
     expect(future?.weightKgSnapshot).toBeNull();
   });
 
+  it('merges imported meals into existing and new days', async () => {
+    dbName = `calorie-test-meal-merge-${Date.now()}-${Math.random()}`;
+    const repo = createRepository();
+    await repo.initialize();
+
+    const existingLog = makeLog('2026-11-13');
+    existingLog.meals.lunch.push(
+      createFoodEntry(SEED_FOODS[0]!, {
+        grams: 100,
+        enteredQuantity: 100,
+        enteredUnit: 'g',
+      }),
+    );
+    await repo.saveDailyLog(existingLog);
+
+    const incomingExisting = makeLog('2026-11-13');
+    incomingExisting.meals.breakfast.push(
+      createFoodEntry(SEED_FOODS[1]!, {
+        grams: 120,
+        enteredQuantity: 120,
+        enteredUnit: 'g',
+      }),
+    );
+    const incomingNew = makeLog('2026-11-14');
+    incomingNew.meals.dinner.push(
+      createFoodEntry(SEED_FOODS[2]!, {
+        grams: 200,
+        enteredQuantity: 200,
+        enteredUnit: 'g',
+      }),
+    );
+
+    const result = await repo.mergeImportedMeals([
+      incomingExisting,
+      incomingNew,
+    ]);
+
+    expect(result).toEqual({ daysImported: 2, entriesImported: 2 });
+    const merged = await repo.getDailyLog('2026-11-13');
+    expect(merged?.meals.lunch).toHaveLength(1);
+    expect(merged?.meals.breakfast).toHaveLength(1);
+    expect(merged?.revision).toBe(2);
+    const created = await repo.getDailyLog('2026-11-14');
+    expect(created?.meals.dinner).toHaveLength(1);
+    expect(created?.revision).toBe(1);
+  });
+
   it('sums consumed grams for a batch food across daily logs', async () => {
     dbName = `calorie-test-food-usage-${Date.now()}-${Math.random()}`;
     const repo = createRepository();

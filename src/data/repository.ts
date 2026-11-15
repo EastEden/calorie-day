@@ -18,6 +18,7 @@ import type {
   TargetSettings,
   UserProfile,
 } from '../domain/types';
+import type { MealImportResult } from '../domain/mealImport';
 import { upgradeDatabaseV1ToV2 } from './migrations';
 import { SEED_FOODS, SEED_VERSION } from './seedFoods';
 
@@ -62,6 +63,7 @@ export interface CalorieRepository {
     target: Nutrition,
     weightKg: number | null,
   ): Promise<void>;
+  mergeImportedMeals(days: DailyLog[]): Promise<MealImportResult>;
   updateDailyLogSnapshot(
     date: string,
     target: Nutrition,
@@ -624,6 +626,84 @@ export class IndexedDbRepository implements CalorieRepository {
     }
 
     return usage;
+  }
+
+  async mergeImportedMeals(days: DailyLog[]): Promise<MealImportResult> {
+    await this.initialize();
+    const db = await this.getDb();
+    const transaction = db.transaction(STORES.logs, 'readwrite');
+    const store = transaction.objectStore(STORES.logs);
+
+    let daysImported = 0;
+    let entriesImported = 0;
+
+    for (const incoming of days) {
+      const incomingEntryCount = Object.values(incoming.meals).reduce(
+        (sum, entries) => sum + entries.length,
+        0,
+      );
+      const request = store.get(incoming.date);
+
+      request.onsuccess = () => {
+        try {
+          const raw = request.result as unknown;
+          let existing: DailyLog | null = null;
+          if (raw !== undefined) {
+            existing = parseStored<DailyLog>(
+              dailyLogSchema,
+              raw,
+              '已保存的每日记录',
+            );
+          }
+
+          const mergedMeals: DailyLog['meals'] = {
+            breakfast: [
+              ...(existing?.meals.breakfast ?? []),
+              ...incoming.meals.breakfast,
+            ],
+            lunch: [
+              ...(existing?.meals.lunch ?? []),
+              ...incoming.meals.lunch,
+            ],
+            dinner: [
+              ...(existing?.meals.dinner ?? []),
+              ...incoming.meals.dinner,
+            ],
+            snack: [
+              ...(existing?.meals.snack ?? []),
+              ...incoming.meals.snack,
+            ],
+          };
+
+          const nextLog = dailyLogSchema.parse({
+            id: existing?.id ?? incoming.id,
+            date: incoming.date,
+            meals: mergedMeals,
+            revision: (existing?.revision ?? 0) + 1,
+            targetSnapshot:
+              existing?.targetSnapshot ?? incoming.targetSnapshot,
+            weightKgSnapshot:
+              existing?.weightKgSnapshot ?? incoming.weightKgSnapshot,
+            createdAt: existing?.createdAt ?? incoming.createdAt,
+            updatedAt: nowIsoTimestamp(),
+          });
+
+          store.put(nextLog);
+          daysImported += 1;
+          entriesImported += incomingEntryCount;
+        } catch {
+          try {
+            transaction.abort();
+          } catch {
+            // The transaction error handler below reports the failure.
+          }
+        }
+      };
+    }
+
+    await transactionAsPromise(transaction);
+
+    return { daysImported, entriesImported };
   }
 
   async updateDailyLogSnapshot(

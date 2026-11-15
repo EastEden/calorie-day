@@ -1,0 +1,133 @@
+import { describe, expect, it } from 'vitest';
+import { parseMealImportJson } from '../mealImport';
+
+function makePayload(days: unknown[]) {
+  return JSON.stringify({
+    schemaVersion: 1,
+    days,
+  });
+}
+
+const breakfast = {
+  name: '鸡蛋',
+  amountGrams: 50,
+  nutrition: {
+    kcal: 72,
+    proteinG: 6.3,
+    carbsG: 0.4,
+    fatG: 4.8,
+  },
+};
+
+describe('mealImport', () => {
+  it('parses a single day with multiple meals', () => {
+    const result = parseMealImportJson(
+      makePayload([
+        {
+          date: '2026-11-15',
+          meals: {
+            breakfast: [breakfast],
+            lunch: [],
+            dinner: [],
+            snack: [],
+          },
+        },
+      ]),
+    );
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.days).toHaveLength(1);
+      expect(result.data.days[0]?.meals.breakfast[0]?.name).toBe(
+        '鸡蛋',
+      );
+    }
+  });
+
+  it('parses multiple days', () => {
+    const result = parseMealImportJson(
+      makePayload([
+        {
+          date: '2026-11-14',
+          meals: {
+            breakfast: [],
+            lunch: [breakfast],
+            dinner: [],
+            snack: [],
+          },
+        },
+        {
+          date: '2026-11-15',
+          meals: {
+            breakfast: [breakfast],
+            lunch: [],
+            dinner: [breakfast],
+            snack: [],
+          },
+        },
+      ]),
+    );
+
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.days).toHaveLength(2);
+    }
+  });
+
+  it('rejects duplicate dates', () => {
+    const day = {
+      date: '2026-11-15',
+      meals: {
+        breakfast: [breakfast],
+        lunch: [],
+        dinner: [],
+        snack: [],
+      },
+    };
+    const result = parseMealImportJson(makePayload([day, day]));
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.errors.join(' ')).toContain('同一天不能出现多次');
+    }
+  });
+
+  it('rejects an empty day', () => {
+    const result = parseMealImportJson(
+      makePayload([
+        {
+          date: '2026-11-15',
+          meals: {
+            breakfast: [],
+            lunch: [],
+            dinner: [],
+            snack: [],
+          },
+        },
+      ]),
+    );
+
+    expect(result.success).toBe(false);
+  });
+
+  it('rejects a wrong schema version', () => {
+    const result = parseMealImportJson(
+      JSON.stringify({
+        schemaVersion: 2,
+        days: [
+          {
+            date: '2026-11-15',
+            meals: {
+              breakfast: [breakfast],
+              lunch: [],
+              dinner: [],
+              snack: [],
+            },
+          },
+        ],
+      }),
+    );
+
+    expect(result.success).toBe(false);
+  });
+});
