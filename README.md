@@ -4,7 +4,7 @@
 
 记录每天吃了什么，查看热量、三大营养素和目标进度；数据默认只保存在当前浏览器——无需注册，没有后端，也不会上传饮食记录。
 
-[在线使用](https://easteden.github.io/calorie-day/) · [数据模型](docs/data-model.md) · [问题反馈](https://github.com/EastEden/calorie-day/issues)
+[在线使用](https://easteden.github.io/calorie-day/) · [数据模型](docs/data-model.md) · [问题反馈](https://github.com/EastEden/calorie-day/issues) · [MIT License](LICENSE)
 
 <p align="center">
   <img src="screenshots/diary-desktop-final.png" alt="每日热量桌面版界面" width="860" />
@@ -259,6 +259,12 @@ screenshots/    界面截图
 - [食物库导入格式](docs/food-import.schema.json)
 - [食物库示例](docs/sample-foods.json)
 - [饮食记录 AI 导入格式](docs/meal-import.schema.json)
+
+## License
+
+本项目使用 [MIT License](LICENSE)。
+
+你可以自由使用、修改、分发和商用，只需保留版权声明和许可证文本；软件按“原样”提供，不附带担保。
 
 ---
 
