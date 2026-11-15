@@ -95,6 +95,38 @@ export interface MealImportParseFailure {
   errors: string[];
 }
 
+/**
+ * Repairs common formatting mistakes from AI output without changing valid
+ * meal data: Markdown fences, surrounding prose, smart quotes, escaped
+ * brackets, trailing commas and missing empty meal arrays.
+ */
+export function repairMealImportJson(raw: string): string {
+  let text = raw.replace(/^\uFEFF/, '').trim();
+
+  text = text.replace(/```(?:json)?/gi, '');
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if (start >= 0 && end > start) {
+    text = text.slice(start, end + 1);
+  }
+
+  text = text
+    .replace(/[“”„‟]/g, '"')
+    .replace(/\\\[/g, '[')
+    .replace(/\\\]/g, ']')
+    .replace(/\\\{/g, '{')
+    .replace(/\\\}/g, '}')
+    .replace(/\u00a0/g, ' ');
+
+  text = text.replace(
+    /("(?:breakfast|lunch|dinner|snack)")\s*:\s*(?=[,}])/g,
+    '$1: []',
+  );
+  text = text.replace(/,\s*([}\]])/g, '$1');
+
+  return text.trim();
+}
+
 export function parseMealImportJson(
   raw: string,
 ): MealImportParseSuccess | MealImportParseFailure {
@@ -115,63 +147,25 @@ export function parseMealImportJson(
   return { success: true, data: result.data as MealImportPayload };
 }
 
-export const MEAL_IMPORT_AI_PROMPT = `请把你识别到的每一餐，按下面的 JSON 格式输出。
-如果识别结果涉及多天记录，请先不要输出 JSON：先用一句话向用户确认要导出的日期范围（例如“2026-11-14 到 2026-11-15”或具体哪几天）。等用户明确确认后，再只输出确认范围内的 JSON。
-如果是单天记录，可以直接输出 JSON。最终输出时不要解释、不要用代码块，只输出 JSON 本身。
+export const MEAL_IMPORT_AI_PROMPT = `请把你识别到的每一餐，按以下 JSON 格式输出。
 
-规则：
-1. 多天记录必须先确认日期范围，再输出 JSON。
-2. 最外层必须有 "schemaVersion": 1 和 "days" 数组。
-3. 每天一个对象，包含 "date"（格式 YYYY-MM-DD）和 "meals"。
-4. "meals" 固定四个键：breakfast（早餐）、lunch（午餐）、dinner（晚餐）、snack（加餐）；没有的餐用空数组 []。
-5. 每条食物包含 "name"（食物名称）、"amountGrams"（克数）、"nutrition"（本次摄入量的总营养）。
-6. nutrition 的四个字段：kcal（热量）、proteinG（蛋白质克）、carbsG（碳水克）、fatG（脂肪克）。都是数字，按本次克数计算总量，而不是每100g。
-7. 不认识或不确定的食物也要给出合理估算，名称尽量简短。
+流程：
+- 用户未提供日期且只有单天记录时，使用用户本地今天，直接输出 JSON。
+- 多天记录或日期不明确时，先用一句话确认日期范围，确认后只输出该范围内的 JSON。
+
+格式规则：
+1. 最外层："schemaVersion": 1 和 "days" 数组。
+2. 每天一个对象："date"（YYYY-MM-DD）和 "meals"。
+3. "meals" 固定四个键：breakfast、lunch、dinner、snack；没有的餐写 []。
+4. 每条食物："name"（简短名称）、"amountGrams"、"nutrition"。
+5. "nutrition" 含 kcal、proteinG、carbsG、fatG，均为数字，表示本次摄入总量（不是每100g），最多保留一位小数。
+6. 不确定的食物或份量，按标准份量合理估算。
+7. 饮品中的添加物（牛奶、糖等）单独列为一项。
+
+输出要求：
+- 只输出一个 \`\`\`json 代码块，块内是完整、紧凑单行的 JSON，可直接被 JSON.parse() 解析。
+- 键和字符串只用英文半角双引号，不转义 [ ] { }。
+- 代码块外不写任何解释、注释或引用块。
 
 示例：
-{
-  "schemaVersion": 1,
-  "days": [
-    {
-      "date": "2026-11-15",
-      "meals": {
-        "breakfast": [
-          {
-            "name": "水煮蛋",
-            "amountGrams": 50,
-            "nutrition": {
-              "kcal": 72,
-              "proteinG": 6.3,
-              "carbsG": 0.4,
-              "fatG": 4.8
-            }
-          }
-        ],
-        "lunch": [
-          {
-            "name": "米饭",
-            "amountGrams": 200,
-            "nutrition": {
-              "kcal": 232,
-              "proteinG": 5.2,
-              "carbsG": 51.4,
-              "fatG": 0.6
-            }
-          },
-          {
-            "name": "清炒西兰花",
-            "amountGrams": 150,
-            "nutrition": {
-              "kcal": 52,
-              "proteinG": 4.1,
-              "carbsG": 8.0,
-              "fatG": 0.9
-            }
-          }
-        ],
-        "dinner": [],
-        "snack": []
-      }
-    }
-  ]
-}`;
+{"schemaVersion":1,"days":[{"date":"2026-11-15","meals":{"breakfast":[{"name":"水煮蛋","amountGrams":50,"nutrition":{"kcal":72,"proteinG":6.3,"carbsG":0.4,"fatG":4.8}}],"lunch":[],"dinner":[],"snack":[]}}]}`;
