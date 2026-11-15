@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { parseMealImportJson } from '../mealImport';
+import {
+  MEAL_IMPORT_AI_PROMPT,
+  parseMealImportJson,
+} from '../mealImport';
 
 function makePayload(days: unknown[]) {
   return JSON.stringify({
@@ -20,6 +23,12 @@ const breakfast = {
 };
 
 describe('mealImport', () => {
+  it('asks the AI to confirm the range before multi-day output', () => {
+    expect(MEAL_IMPORT_AI_PROMPT).toContain('先不要输出 JSON');
+    expect(MEAL_IMPORT_AI_PROMPT).toContain('日期范围');
+    expect(MEAL_IMPORT_AI_PROMPT).toContain('单天记录');
+  });
+
   it('parses a single day with multiple meals', () => {
     const result = parseMealImportJson(
       makePayload([

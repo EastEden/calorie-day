@@ -268,7 +268,7 @@ interface BackupImportResult {
 - 每条记录包含 `name`、`amountGrams` 和本次摄入总量的 `nutrition`。
 - 营养按总量填写；导入时换算为 `nutritionPer100gSnapshot` 写入记录快照。
 - 不创建食物库条目，只写入对应日期的饮食记录；同一天按餐次追加合并。
-- 导入弹窗内置一段可复制的 AI 提示词，指导外部 AI 输出该格式。
+- 导入弹窗内置一段可复制的 AI 提示词，指导外部 AI 输出该格式；涉及多天时，提示词要求 AI 先向用户确认日期范围，再输出 JSON。
 
 ## 6. 未来 API 映射建议
 
