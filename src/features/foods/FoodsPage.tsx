@@ -45,9 +45,14 @@ export function FoodsPage() {
   const [editingFood, setEditingFood] = useState<Food | null>(null);
   const [importOpen, setImportOpen] = useState(false);
 
+  const libraryFoods = useMemo(
+    () => foods.filter((food) => !food.batch),
+    [foods],
+  );
+
   const filteredFoods = useMemo(() => {
     const normalizedSearch = search.trim().toLocaleLowerCase(locale);
-    return foods.filter((food) => {
+    return libraryFoods.filter((food) => {
       if (category !== 'all' && food.category !== category) {
         return false;
       }
@@ -61,15 +66,15 @@ export function FoodsPage() {
         t(FOOD_CATEGORY_LABEL_KEYS[food.category]).includes(normalizedSearch)
       );
     });
-  }, [category, foods, locale, search, t]);
+  }, [category, libraryFoods, locale, search, t]);
 
   const categoryCounts = useMemo(() => {
     const counts = new Map<FoodCategory, number>();
-    for (const food of foods) {
+    for (const food of libraryFoods) {
       counts.set(food.category, (counts.get(food.category) ?? 0) + 1);
     }
     return counts;
-  }, [foods]);
+  }, [libraryFoods]);
 
   const openNewFood = () => {
     setEditingFood(null);
@@ -85,9 +90,9 @@ export function FoodsPage() {
     try {
       downloadTextFile(
         `calorie-foods-${getTodayIso()}.json`,
-        stringifyFoodExport(foods),
+        stringifyFoodExport(libraryFoods),
       );
-      showToast(t('foods.exported', { n: foods.length }));
+      showToast(t('foods.exported', { n: libraryFoods.length }));
     } catch (error) {
       showToast(
         error instanceof Error ? error.message : t('foods.exportFailed'),
@@ -141,7 +146,7 @@ export function FoodsPage() {
             placeholder={t('foods.searchPlaceholder')}
             aria-label={t('foods.searchAria')}
           />
-          {foods.length > 0 && (
+          {libraryFoods.length > 0 && (
             <span className="search-field__count">
               {filteredFoods.length}
             </span>
@@ -155,7 +160,7 @@ export function FoodsPage() {
             onClick={() => setCategory('all')}
           >
             {t('foods.all')}
-            <small>{foods.length}</small>
+            <small>{libraryFoods.length}</small>
           </button>
           {FOOD_CATEGORIES.map((item) =>
             (categoryCounts.get(item) ?? 0) > 0 ? (
@@ -241,12 +246,12 @@ export function FoodsPage() {
             <Search size={22} aria-hidden="true" />
           </div>
           <h2>
-            {foods.length === 0
+            {libraryFoods.length === 0
               ? t('foods.emptyTitle')
               : t('foods.emptySearchTitle')}
           </h2>
           <p>
-            {foods.length === 0
+            {libraryFoods.length === 0
               ? t('foods.emptyBody')
               : t('foods.emptySearchBody')}
           </p>
@@ -264,7 +269,7 @@ export function FoodsPage() {
         <strong>{t('foods.dataTitle')}</strong>
         <p>{t('notes.dataReference')}</p>
         <p>{t('foods.dataBasis')}</p>
-        <p>{t('foods.dataCount', { n: foods.length })}</p>
+        <p>{t('foods.dataCount', { n: libraryFoods.length })}</p>
       </div>
 
       <FoodEditorModal

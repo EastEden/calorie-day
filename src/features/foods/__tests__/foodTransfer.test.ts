@@ -106,7 +106,7 @@ describe('foodTransfer', () => {
     expect(parsed.success).toBe(true);
   });
 
-  it('preserves batch metadata through a food export and import', () => {
+  it('excludes batch foods from the food library export', () => {
     const batchFood: Food = {
       ...existing,
       id: 'batch-export',
@@ -115,28 +115,13 @@ describe('foodTransfer', () => {
         totalGrams: 1200,
         portionGrams: 300,
         portions: 4,
-        components: [
-          {
-            foodId: existing.id,
-            names: { ...existing.names },
-            totalGrams: 1200,
-            nutritionPer100g: { ...existing.nutritionPer100g },
-          },
-        ],
-        sourceFoodId: existing.id,
       },
     };
-    const exportPayload = buildFoodExportPayload([batchFood]);
-    expect(exportPayload.foods[0]?.batch).toEqual(batchFood.batch);
+    const exportPayload = buildFoodExportPayload([existing, batchFood]);
 
-    const parsed = foodImportSchema.safeParse(exportPayload);
-    expect(parsed.success).toBe(true);
-    if (!parsed.success) {
-      return;
-    }
-    const plan = buildFoodImportPlan([], parsed.data);
-    const foods = materializeImportedFoods(plan, false);
-    expect(foods[0]?.batch).toEqual(batchFood.batch);
+    expect(exportPayload.foods).toHaveLength(1);
+    expect(exportPayload.foods[0]?.id).toBe(existing.id);
+    expect(exportPayload.foods[0]?.batch).toBeUndefined();
   });
 
   it('builds a v1 template with a required zh-CN name', () => {

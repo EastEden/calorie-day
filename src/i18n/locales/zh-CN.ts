@@ -282,6 +282,7 @@ export const zhCN = {
   'batch.groupNamePlaceholder': '例如：周一午餐（可选）',
   'batch.defaultName': '备餐',
   'batch.components': '食材',
+  'batch.componentsMore': '共 {{n}} 种',
   'batch.addComponent': '添加食材',
   'batch.chooseComponent': '选择食材',
   'batch.pickComponentTitle': '选择食材',

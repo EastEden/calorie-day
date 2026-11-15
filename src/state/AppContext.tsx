@@ -230,6 +230,34 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  const cleanupFinishedBatches = useCallback(async () => {
+    try {
+      const usage = await repository.getFoodUsage();
+      setFoodUsage(usage);
+
+      const completed = foods.filter(
+        (food) =>
+          food.batch &&
+          (food.batch.disposedAt ||
+            (usage[food.id] ?? 0) >=
+              food.batch.totalGrams - 0.001),
+      );
+      if (completed.length === 0) {
+        return;
+      }
+
+      const completedIds = new Set(completed.map((food) => food.id));
+      for (const food of completed) {
+        await repository.deleteFood(food.id);
+      }
+      setFoods((current) =>
+        current.filter((food) => !completedIds.has(food.id)),
+      );
+    } catch {
+      // Batch cleanup is best-effort and must not block a saved diary entry.
+    }
+  }, [foods]);
+
   useEffect(() => {
     let knownToday = getTodayIso();
 
@@ -293,9 +321,38 @@ export function AppProvider({ children }: { children: ReactNode }) {
           return;
         }
 
+        let foodsForState = storedFoods;
+        const completedBatchIds = new Set(
+          storedFoods
+            .filter(
+              (food) =>
+                food.batch &&
+                (food.batch.disposedAt ||
+                  (storedUsage[food.id] ?? 0) >=
+                    food.batch.totalGrams - 0.001),
+            )
+            .map((food) => food.id),
+        );
+        if (completedBatchIds.size > 0) {
+          try {
+            for (const foodId of completedBatchIds) {
+              await repository.deleteFood(foodId);
+            }
+            foodsForState = storedFoods.filter(
+              (food) => !completedBatchIds.has(food.id),
+            );
+          } catch {
+            // Keep the stored foods if cleanup fails; the next save retries.
+          }
+        }
+
+        if (cancelled) {
+          return;
+        }
+
         setProfile(storedProfile);
         setTargetSettings(storedSettings);
-        setFoods(sortFoods(storedFoods));
+        setFoods(sortFoods(foodsForState));
         setFoodUsage(storedUsage);
         setStatus('ready');
         void refreshStorageInfo();
@@ -411,7 +468,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           showToast(successMessage);
         }
 
-        void refreshFoodUsage();
+        void cleanupFinishedBatches();
         return true;
       } catch (error) {
         if (error instanceof StaleWriteError) {
@@ -434,7 +491,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsSaving(false);
       }
     },
-    [profile?.weightKg, refreshFoodUsage, showToast, targets],
+    [cleanupFinishedBatches, profile?.weightKg, showToast, targets],
   );
 
   const completeOnboarding = useCallback(
@@ -639,7 +696,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             meal: translate(MEAL_META[mealType].labelKey),
           }),
         );
-        void refreshFoodUsage();
+        void cleanupFinishedBatches();
         return true;
       } catch (error) {
         if (error instanceof StaleWriteError) {
@@ -655,8 +712,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     [
       foods,
+      cleanupFinishedBatches,
       profile?.weightKg,
-      refreshFoodUsage,
       showToast,
       targets,
     ],
@@ -667,24 +724,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (!batch.batch) {
         return;
       }
-      const now = nowIsoTimestamp();
-      const nextFood = foodSchema.parse({
-        ...batch,
-        batch: {
-          ...batch.batch,
-          disposedAt: now,
-        },
-        updatedAt: now,
-      }) as Food;
 
       try {
-        const saved = await repository.saveFood(nextFood);
+        await repository.deleteFood(batch.id);
         setFoods((current) =>
-          sortFoods(
-            current.map((food) =>
-              food.id === saved.id ? saved : food,
-            ),
-          ),
+          current.filter((food) => food.id !== batch.id),
         );
         showToast(translate('toast.batchDisposed'));
       } catch (error) {
