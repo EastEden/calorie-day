@@ -82,8 +82,9 @@ export function FoodEditorModal({
       return;
     }
 
-    const initialUnit: AmountUnit =
-      food?.nutritionPer100g
+    const initialUnit: AmountUnit = !food
+      ? 'g'
+      : food.nutritionPer100g
         ? food.defaultUnit === 'ml' && food.nutritionPer100ml
           ? 'ml'
           : 'g'
