@@ -34,7 +34,7 @@ function formatShareAmount(entry: FoodEntry, gramUnit: string): string {
   if (entry.enteredUnit === 'serving' && entry.servingLabel) {
     return `${formatDecimal(entry.enteredQuantity)} ${entry.servingLabel} · ${formatDecimal(
       entry.amount,
-    )}${gramUnit}`;
+    )}${entry.unit === 'ml' ? 'ml' : gramUnit}`;
   }
   return `${formatDecimal(entry.amount)}${entry.unit === 'ml' ? 'ml' : gramUnit}`;
 }

@@ -72,11 +72,32 @@ export const targetNutritionSchema = nutritionSchema.superRefine((value, ctx) =>
   }
 });
 
-export const servingSchema = z.object({
+export const amountUnitSchema = z.enum(['g', 'ml']);
+
+const servingBaseSchema = z.object({
   id: z.string().min(1).max(120),
   label: z.string().trim().min(1).max(24),
-  grams: finiteNumber.positive().max(10_000),
+  amount: finiteNumber.positive().max(10_000),
+  unit: amountUnitSchema,
 });
+
+export const servingSchema = z.preprocess((value) => {
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    'grams' in value &&
+    !('amount' in value)
+  ) {
+    const legacy = value as Record<string, unknown>;
+    return {
+      ...legacy,
+      amount: legacy.grams,
+      unit: 'g',
+    };
+  }
+  return value;
+}, servingBaseSchema);
 
 export const foodCategorySchema = z.enum([
   'protein',
@@ -89,8 +110,6 @@ export const foodCategorySchema = z.enum([
 ]);
 
 export const foodBasisSchema = z.enum(['raw', 'dry', 'as_sold']);
-
-export const amountUnitSchema = z.enum(['g', 'ml']);
 
 export const foodSourceSchema = z.enum(['builtin', 'custom', 'imported']);
 
@@ -152,11 +171,30 @@ export const foodSchema = z
     }
   });
 
-const importedServingSchema = z.object({
+const importedServingBaseSchema = z.object({
   id: z.string().trim().min(1).max(120).optional(),
   label: z.string().trim().min(1).max(24),
-  grams: finiteNumber.positive().max(10_000),
+  amount: finiteNumber.positive().max(10_000),
+  unit: amountUnitSchema,
 });
+
+const importedServingSchema = z.preprocess((value) => {
+  if (
+    typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    'grams' in value &&
+    !('amount' in value)
+  ) {
+    const legacy = value as Record<string, unknown>;
+    return {
+      ...legacy,
+      amount: legacy.grams,
+      unit: 'g',
+    };
+  }
+  return value;
+}, importedServingBaseSchema);
 
 export const importedFoodSchema = z
   .object({
@@ -242,7 +280,8 @@ const foodEntryBaseSchema = z
     enteredQuantity: finiteNumber.positive().max(100_000),
     enteredUnit: z.enum(['g', 'ml', 'serving']),
     servingLabel: z.string().trim().min(1).max(24).optional(),
-    servingGrams: finiteNumber.positive().max(10_000).optional(),
+    servingAmount: finiteNumber.positive().max(10_000).optional(),
+    servingUnit: amountUnitSchema.optional(),
     nutritionPer100Snapshot: nutritionSchema,
     createdAt: timestampSchema,
     updatedAt: timestampSchema,
@@ -256,11 +295,11 @@ const foodEntryBaseSchema = z
           message: '按份记录时必须提供份量名称',
         });
       }
-      if (!entry.servingGrams) {
+      if (!entry.servingAmount || !entry.servingUnit) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ['servingGrams'],
-          message: '按份记录时必须提供每份克数',
+          path: ['servingAmount'],
+          message: '按份记录时必须提供每份数量',
         });
       }
     }
@@ -285,6 +324,9 @@ export const foodEntrySchema = z.preprocess((value) => {
     ...legacy,
     amount: legacy.amountGrams,
     unit: 'g',
+    ...(legacy.servingGrams && !legacy.servingAmount
+      ? { servingAmount: legacy.servingGrams, servingUnit: 'g' }
+      : {}),
     nutritionPer100Snapshot: legacy.nutritionPer100gSnapshot,
   };
 }, foodEntryBaseSchema);

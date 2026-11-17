@@ -51,7 +51,12 @@ interface Food {
   nutritionPer100g?: Nutrition;
   nutritionPer100ml?: Nutrition;
   defaultUnit: AmountUnit;
-  servings: { id: string; label: string; grams: number }[];
+  servings: {
+    id: string;
+    label: string;
+    amount: number;
+    unit: AmountUnit;
+  }[];
   batch?: {
     totalGrams: number;
     portionGrams: number;
@@ -80,7 +85,8 @@ interface FoodEntry {
   enteredQuantity: number;
   enteredUnit: 'g' | 'ml' | 'serving';
   servingLabel?: string;
-  servingGrams?: number;
+  servingAmount?: number;
+  servingUnit?: AmountUnit;
   nutritionPer100Snapshot: Nutrition; // 每 100 unit 的快照
   createdAt: string;
   updatedAt: string;
@@ -119,7 +125,8 @@ interface TargetSettings {
 数据库：`calorie-day`，版本 `2`。保留从 v1 升级时将 `name` / `foodName` 转为
 `names` / `foodNames` 的兼容迁移。旧记录中的 `amountGrams` /
 `nutritionPer100gSnapshot` 在读取时规范化为 `amount: g` /
-`nutritionPer100Snapshot`，不需要写入迁移。
+`nutritionPer100Snapshot`；旧 servingGrams 规范化为 servingAmount: g /
+servingUnit: "g"，不需要写入迁移。
 
 内置食物 `seedVersion` 当前为 `1`。检测到旧 seedVersion 时，只删除并重写
 `source: "builtin"` 的内置食物，自定义 / 导入食物、日志、个人资料和目标设置不受影响。
@@ -165,7 +172,8 @@ interface TargetSettings {
 - `FoodEntry.unit` 与 `nutritionPer100Snapshot` 必须对应；250ml 牛奶直接使用
   每 100ml 快照计算，不需要密度换算。
 - 当前阶段不保存密度。旧记录统一规范化为 `unit: "g"`，历史营养快照保持不变。
-- 按份记录只适用于带克重 servings 的食物；份量仍会换算成克后写入 `amount/unit`。
+- 常用份量本身也带单位（例如“杯 · 250ml”或“个 · 50g”）；按份记录会换算成对应
+  `amount/unit`，并保存 servingAmount / servingUnit 供再次编辑。
 - 备餐暂未改为按份统计，内部把 ml 食材按 `1ml = 1g` 计入克重；这是唯一的临时假设。
 
 ### 4.3 日期是本地日期

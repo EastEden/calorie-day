@@ -46,7 +46,8 @@ export interface Nutrition {
 export interface ServingOption {
   id: string;
   label: string;
-  grams: number;
+  amount: number;
+  unit: AmountUnit;
 }
 
 /**
@@ -123,7 +124,8 @@ export interface FoodEntry {
   enteredQuantity: number;
   enteredUnit: EntryUnit;
   servingLabel?: string;
-  servingGrams?: number;
+  servingAmount?: number;
+  servingUnit?: AmountUnit;
   nutritionPer100Snapshot: Nutrition;
   createdAt: string;
   updatedAt: string;
@@ -173,7 +175,8 @@ export interface FoodDraft {
   defaultUnit: AmountUnit;
   servings: {
     label: string;
-    grams: number;
+    amount: number;
+    unit: AmountUnit;
   }[];
 }
 
@@ -252,7 +255,8 @@ export interface ImportedFoodInput {
   servings?: {
     id?: string;
     label: string;
-    grams: number;
+    amount: number;
+    unit: AmountUnit;
   }[];
   batch?: MealPrepBatchMeta;
 }

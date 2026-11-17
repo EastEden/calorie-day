@@ -247,6 +247,17 @@
   margin-left: -4px;
 }
 
+.serving-editor__unit-select {
+  height: 40px;
+  padding: 0 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12px;
+}
+
 .food-editor__danger {
   margin-top: 2px;
 }

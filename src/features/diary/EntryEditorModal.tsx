@@ -49,18 +49,21 @@ export function EntryEditorModal({
     enteredQuantity: entry.enteredQuantity,
     enteredUnit: entry.enteredUnit,
     servingLabel: entry.servingLabel,
-    servingGrams: entry.servingGrams,
+    servingAmount: entry.servingAmount,
+    servingUnit: entry.servingUnit,
   };
 
   const servings =
     entry.enteredUnit === 'serving' &&
     entry.servingLabel &&
-    entry.servingGrams
+    entry.servingAmount &&
+    entry.servingUnit
       ? [
           {
             id: 'entry-current-serving',
             label: entry.servingLabel,
-            grams: entry.servingGrams,
+            amount: entry.servingAmount,
+            unit: entry.servingUnit,
           },
         ]
       : [];

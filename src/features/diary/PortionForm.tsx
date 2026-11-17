@@ -23,7 +23,8 @@ export interface PortionInitial {
   enteredQuantity: number;
   enteredUnit: EntryUnit;
   servingLabel?: string;
-  servingGrams?: number;
+  servingAmount?: number;
+  servingUnit?: AmountUnit;
 }
 
 interface PortionFormProps {
@@ -54,13 +55,16 @@ export function PortionForm({
   const { t } = useI18n();
   const hasGrams = Boolean(nutritionByUnit.g);
   const hasMilliliters = Boolean(nutritionByUnit.ml);
-  const availableServings = hasGrams ? servings : [];
+  const availableServings = servings.filter(
+    (serving) => Boolean(nutritionByUnit[serving.unit]),
+  );
 
   const initialServing = useMemo<ServingOption | null>(() => {
     if (
       initial?.enteredUnit !== 'serving' ||
       !initial.servingLabel ||
-      !initial.servingGrams
+      !initial.servingAmount ||
+      !initial.servingUnit
     ) {
       return null;
     }
@@ -68,14 +72,16 @@ export function PortionForm({
     const existing = availableServings.find(
       (serving) =>
         serving.label === initial.servingLabel &&
-        serving.grams === initial.servingGrams,
+        serving.amount === initial.servingAmount &&
+        serving.unit === initial.servingUnit,
     );
 
     return (
       existing ?? {
         id: 'entry-current-serving',
         label: initial.servingLabel,
-        grams: initial.servingGrams,
+        amount: initial.servingAmount,
+        unit: initial.servingUnit,
       }
     );
   }, [availableServings, initial]);
@@ -134,9 +140,14 @@ export function PortionForm({
   const parsedQuantity = normalizeNumericInput(quantity);
   const amount =
     unit === 'serving'
-      ? parsedQuantity * (selectedServing?.grams ?? 0)
+      ? parsedQuantity * (selectedServing?.amount ?? 0)
       : parsedQuantity;
-  const amountUnit: AmountUnit = unit === 'ml' ? 'ml' : 'g';
+  const amountUnit: AmountUnit =
+    unit === 'serving'
+      ? selectedServing?.unit ?? 'g'
+      : unit === 'ml'
+        ? 'ml'
+        : 'g';
   const referenceNutrition = nutritionByUnit[amountUnit];
   const isValid =
     Boolean(referenceNutrition) &&
@@ -174,7 +185,7 @@ export function PortionForm({
         return;
       }
       if (isValid) {
-        setQuantityFromNumber(amount / target.grams);
+        setQuantityFromNumber(amount / target.amount);
       }
       setServingId(target.id);
       setUnit('serving');
@@ -205,8 +216,10 @@ export function PortionForm({
         enteredUnit: unit,
         servingLabel:
           unit === 'serving' ? selectedServing?.label : undefined,
-        servingGrams:
-          unit === 'serving' ? selectedServing?.grams : undefined,
+        servingAmount:
+          unit === 'serving' ? selectedServing?.amount : undefined,
+        servingUnit:
+          unit === 'serving' ? selectedServing?.unit : undefined,
         nutritionPer100Snapshot: referenceNutrition,
       });
       if (!ok) {
@@ -222,7 +235,7 @@ export function PortionForm({
   };
 
   const per100Label =
-    unit === 'ml' ? t('portion.per100Ml') : t('portion.per100');
+    amountUnit === 'ml' ? t('portion.per100Ml') : t('portion.per100');
   const quantityLabel =
     unit === 'serving'
       ? t('portion.servingsLabel')
@@ -315,8 +328,8 @@ export function PortionForm({
               >
                 {serving.label}
                 <small>
-                  {formatDecimal(serving.grams)}
-                  {t('common.gram')}
+                  {formatDecimal(serving.amount)}
+                  {serving.unit}
                 </small>
               </button>
             ))}
@@ -405,7 +418,8 @@ export function PortionForm({
               ? t('portion.servingDetail', {
                   quantity: formatDecimal(parsedQuantity || 0),
                   label: selectedServing.label,
-                  grams: formatDecimal(isValid ? amount : 0),
+                  value: formatDecimal(isValid ? amount : 0),
+                  suffix: selectedServing.unit,
                 })
               : unit === 'ml'
                 ? t('portion.mlDetail', {

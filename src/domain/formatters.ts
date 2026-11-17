@@ -65,7 +65,7 @@ export function formatEntryAmount(entry: FoodEntry): string {
   ) {
     return `${formatDecimal(entry.enteredQuantity)} ${entry.servingLabel} · ${formatDecimal(
       entry.amount,
-    )} g`;
+    )} ${entry.unit}`;
   }
 
   return `${formatDecimal(entry.amount)} ${entry.unit}`;

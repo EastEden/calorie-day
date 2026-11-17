@@ -927,7 +927,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         servings: draft.servings.map((serving) => ({
           id: createId('serving'),
           label: serving.label.trim(),
-          grams: serving.grams,
+          amount: serving.amount,
+          unit: serving.unit,
         })),
         source: 'custom',
         createdAt: now,
@@ -972,7 +973,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         servings: draft.servings.map((serving) => ({
           id: createId('serving'),
           label: serving.label.trim(),
-          grams: serving.grams,
+          amount: serving.amount,
+          unit: serving.unit,
         })),
         updatedAt: nowIsoTimestamp(),
       }) as Food;

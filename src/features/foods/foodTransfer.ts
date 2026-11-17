@@ -107,7 +107,8 @@ function makeImportedFood(
     servings: (incoming.servings ?? []).map((serving) => ({
       id: createId('serving'),
       label: serving.label.trim(),
-      grams: serving.grams,
+      amount: serving.amount,
+      unit: serving.unit,
     })),
     ...(incoming.batch ? { batch: { ...incoming.batch } } : {}),
     source: 'imported',
@@ -160,7 +161,8 @@ export function buildFoodExportPayload(foods: Food[]): {
         servings: food.servings.map((serving) => ({
           id: serving.id,
           label: serving.label,
-          grams: serving.grams,
+          amount: serving.amount,
+          unit: serving.unit,
         })),
       })),
   };
@@ -191,7 +193,8 @@ export function buildFoodImportTemplate(): string {
         servings: [
           {
             label: '个',
-            grams: 30,
+            amount: 30,
+            unit: 'g',
           },
         ],
       },

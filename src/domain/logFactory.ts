@@ -16,7 +16,8 @@ export interface EntryAmountInput {
   enteredQuantity: number;
   enteredUnit: EntryUnit;
   servingLabel?: string;
-  servingGrams?: number;
+  servingAmount?: number;
+  servingUnit?: AmountUnit;
   nutritionPer100Snapshot?: Nutrition;
 }
 
@@ -74,7 +75,8 @@ export function createFoodEntry(
     enteredQuantity: amount.enteredQuantity,
     enteredUnit: amount.enteredUnit,
     servingLabel: amount.servingLabel,
-    servingGrams: amount.servingGrams,
+    servingAmount: amount.servingAmount,
+    servingUnit: amount.servingUnit,
     nutritionPer100Snapshot: { ...nutritionSnapshot },
     createdAt: now,
     updatedAt: now,
@@ -92,7 +94,8 @@ export function applyEntryAmount(
     enteredQuantity: amount.enteredQuantity,
     enteredUnit: amount.enteredUnit,
     servingLabel: amount.servingLabel,
-    servingGrams: amount.servingGrams,
+    servingAmount: amount.servingAmount,
+    servingUnit: amount.servingUnit,
     ...(amount.nutritionPer100Snapshot
       ? {
           nutritionPer100Snapshot: {

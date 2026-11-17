@@ -43,7 +43,8 @@ function makeSeedFood(input: SeedFoodInput): Food {
     servings: (input.servings ?? []).map((serving, index) => ({
       id: `builtin-${input.id}-serving-${index + 1}`,
       label: serving.label,
-      grams: serving.grams,
+      amount: serving.grams,
+      unit: 'g',
     })),
     source: 'builtin',
     createdAt: SEED_TIMESTAMP,

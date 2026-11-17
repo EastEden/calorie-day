@@ -35,7 +35,8 @@ interface FoodEditorModalProps {
 interface ServingRow {
   key: string;
   label: string;
-  grams: string;
+  amount: string;
+  unit: AmountUnit;
 }
 
 interface FieldErrors {
@@ -51,7 +52,8 @@ function makeServingRows(food: Food | null): ServingRow[] {
   return (food?.servings ?? []).map((serving) => ({
     key: createId('serving-row'),
     label: serving.label,
-    grams: String(serving.grams),
+    amount: String(serving.amount),
+    unit: serving.unit,
   }));
 }
 
@@ -126,6 +128,11 @@ export function FoodEditorModal({
         ? food?.nutritionPer100ml
         : food?.nutritionPer100g;
     setNutritionUnit(nextUnit);
+    if (!food) {
+      setServings((current) =>
+        current.map((serving) => ({ ...serving, unit: nextUnit })),
+      );
+    }
     setKcal(reference ? String(reference.kcal) : '');
     setProtein(reference ? String(reference.proteinG) : '');
     setCarbs(reference ? String(reference.carbsG) : '');
@@ -170,13 +177,13 @@ export function FoodEditorModal({
         next.servings = t('foodEditor.servingNameRequired');
         break;
       }
-      const gramsValue = Number(serving.grams);
+      const amountValue = Number(serving.amount);
       if (
-        serving.grams.trim() === '' ||
-        !Number.isFinite(gramsValue) ||
-        gramsValue <= 0
+        serving.amount.trim() === '' ||
+        !Number.isFinite(amountValue) ||
+        amountValue <= 0
       ) {
-        next.servings = t('foodEditor.servingGramsRequired');
+        next.servings = t('foodEditor.servingAmountRequired');
         break;
       }
     }
@@ -208,7 +215,8 @@ export function FoodEditorModal({
         : { nutritionPer100ml: nutrition }),
       servings: servings.map((serving) => ({
         label: serving.label.trim(),
-        grams: Number(serving.grams),
+        amount: Number(serving.amount),
+        unit: serving.unit,
       })),
     };
 
@@ -258,9 +266,16 @@ export function FoodEditorModal({
     }
   };
 
+  const servingUnits = (['g', 'ml'] as const).filter(
+    (unit) =>
+      nutritionUnit === unit ||
+      (unit === 'g' && food?.nutritionPer100g) ||
+      (unit === 'ml' && food?.nutritionPer100ml),
+  );
+
   const updateServing = (
     key: string,
-    field: 'label' | 'grams',
+    field: 'label' | 'amount' | 'unit',
     value: string,
   ) => {
     setServings((current) =>
@@ -506,7 +521,14 @@ export function FoodEditorModal({
               onClick={() => {
                 setServings((current) => [
                   ...current,
-                  { key: createId('serving-row'), label: '', grams: '' },
+                  {
+                    key: createId('serving-row'),
+                    label: '',
+                    amount: '',
+                    unit: servingUnits.includes(nutritionUnit)
+                      ? nutritionUnit
+                      : servingUnits[0] ?? 'g',
+                  },
                 ]);
                 setErrors((current) => ({
                   ...current,
@@ -539,16 +561,37 @@ export function FoodEditorModal({
                     inputMode="decimal"
                     min={0}
                     step="any"
-                    value={serving.grams}
-                    placeholder={t('foodEditor.servingGramsPlaceholder')}
+                    value={serving.amount}
+                    placeholder={t('foodEditor.servingAmountPlaceholder')}
                     onChange={(event) =>
-                      updateServing(serving.key, 'grams', event.target.value)
+                      updateServing(serving.key, 'amount', event.target.value)
                     }
-                    aria-label={t('foodEditor.servingGramsAria')}
+                    aria-label={t('foodEditor.servingAmountAria')}
                   />
-                  <span className="serving-editor__unit">
-                    {t('common.gram')}
-                  </span>
+                  {servingUnits.length > 1 ? (
+                    <select
+                      className="serving-editor__unit-select"
+                      value={serving.unit}
+                      onChange={(event) =>
+                        updateServing(
+                          serving.key,
+                          'unit',
+                          event.target.value as AmountUnit,
+                        )
+                      }
+                      aria-label={t('foodEditor.servingUnitAria')}
+                    >
+                      {servingUnits.map((unit) => (
+                        <option key={unit} value={unit}>
+                          {unit}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="serving-editor__unit">
+                      {serving.unit}
+                    </span>
+                  )}
                   <button
                     type="button"
                     className="icon-button icon-button--muted"

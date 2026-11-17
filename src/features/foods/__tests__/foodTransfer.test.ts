@@ -126,7 +126,7 @@ describe('foodTransfer', () => {
         'en-US': 'Exported chicken breast',
       },
       servings: [
-        { id: 'serving-test', label: '份', grams: 100 },
+        { id: 'serving-test', label: '份', amount: 100, unit: 'g' },
       ],
     };
     const exportPayload = buildFoodExportPayload([food]);

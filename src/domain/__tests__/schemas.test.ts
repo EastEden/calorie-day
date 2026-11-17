@@ -76,7 +76,8 @@ describe('food import schema', () => {
       expect(result.data.foods[0]?.names['en-US']).toBe(
         'Test chicken meatballs',
       );
-      expect(result.data.foods[0]?.servings?.[0]?.grams).toBe(30);
+      expect(result.data.foods[0]?.servings?.[0]?.amount).toBe(30);
+      expect(result.data.foods[0]?.servings?.[0]?.unit).toBe('g');
     }
   });
 

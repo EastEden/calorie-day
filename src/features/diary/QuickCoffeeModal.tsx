@@ -114,7 +114,8 @@ export function QuickCoffeeModal({
         enteredQuantity: 1,
         enteredUnit: 'serving',
         servingLabel: t('quickCoffee.cup'),
-        servingGrams: result.grams,
+        servingAmount: result.grams,
+        servingUnit: 'g',
       });
       if (ok) {
         onClose();
