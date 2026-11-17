@@ -6,6 +6,11 @@ import type {
 } from '../domain/types';
 
 export const SEED_VERSION = 1;
+export const INCREMENTAL_SEED_IDS = [
+  'builtin-reduced-fat-milk-2',
+  'builtin-low-fat-milk-1',
+  'builtin-bok-choy-raw',
+] as const;
 const SEED_TIMESTAMP = '2025-01-01T00:00:00.000Z';
 
 interface SeedFoodInput {
@@ -327,6 +332,28 @@ export const SEED_FOODS: Food[] = [
     servings: [{ label: '盒', grams: 250 }],
   }),
   makeSeedFood({
+    id: 'reduced-fat-milk-2',
+    names: { 'zh-CN': '2% 低脂牛奶' },
+    category: 'egg_dairy_soy',
+    basis: 'as_sold',
+    kcal: 50,
+    proteinG: 3.3,
+    carbsG: 4.8,
+    fatG: 2,
+    servings: [{ label: '盒', grams: 250 }],
+  }),
+  makeSeedFood({
+    id: 'low-fat-milk-1',
+    names: { 'zh-CN': '1% 低脂牛奶' },
+    category: 'egg_dairy_soy',
+    basis: 'as_sold',
+    kcal: 42,
+    proteinG: 3.4,
+    carbsG: 5,
+    fatG: 1,
+    servings: [{ label: '盒', grams: 250 }],
+  }),
+  makeSeedFood({
     id: 'skim-milk',
     names: { 'zh-CN': '脱脂牛奶' },
     category: 'egg_dairy_soy',
@@ -422,6 +449,16 @@ export const SEED_FOODS: Food[] = [
     proteinG: 2.9,
     carbsG: 3.6,
     fatG: 0.4,
+  }),
+  makeSeedFood({
+    id: 'bok-choy-raw',
+    names: { 'zh-CN': '上海青（生）' },
+    category: 'vegetable',
+    basis: 'raw',
+    kcal: 13,
+    proteinG: 1.5,
+    carbsG: 2.2,
+    fatG: 0.2,
   }),
   makeSeedFood({
     id: 'cucumber-raw',

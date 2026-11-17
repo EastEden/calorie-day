@@ -20,7 +20,11 @@ import type {
 } from '../domain/types';
 import type { MealImportResult } from '../domain/mealImport';
 import { upgradeDatabaseV1ToV2 } from './migrations';
-import { SEED_FOODS, SEED_VERSION } from './seedFoods';
+import {
+  INCREMENTAL_SEED_IDS,
+  SEED_FOODS,
+  SEED_VERSION,
+} from './seedFoods';
 
 const DEFAULT_DB_NAME = 'calorie-day';
 const DB_VERSION = 2;
@@ -308,6 +312,7 @@ export class IndexedDbRepository implements CalorieRepository {
 
     if (existingMeta !== undefined) {
       await this.resetBuiltInFoods(db, existingMeta);
+      await this.ensureIncrementalSeedFoods(db);
       return;
     }
 
@@ -332,6 +337,32 @@ export class IndexedDbRepository implements CalorieRepository {
     }
 
     transaction.objectStore(STORES.meta).put(meta, 'app');
+    await transactionAsPromise(transaction);
+  }
+
+  /**
+   * Adds newly introduced built-in foods to existing databases without
+   * resetting the rest of the food library.
+   */
+  private async ensureIncrementalSeedFoods(db: IDBDatabase): Promise<void> {
+    const seedById = new Map(this.seedFoods.map((food) => [food.id, food]));
+    const seeds = INCREMENTAL_SEED_IDS.map((id) => seedById.get(id)).filter(
+      (food): food is Food => Boolean(food),
+    );
+    if (seeds.length === 0) {
+      return;
+    }
+
+    const transaction = db.transaction(STORES.foods, 'readwrite');
+    const store = transaction.objectStore(STORES.foods);
+    for (const seed of seeds) {
+      const request = store.get(seed.id);
+      request.onsuccess = () => {
+        if (request.result === undefined) {
+          store.put(foodSchema.parse(seed));
+        }
+      };
+    }
     await transactionAsPromise(transaction);
   }
 
