@@ -17,6 +17,11 @@ export const zhCN = {
   'app.fatalHint':
     '已有数据不会被自动清空。请确认浏览器没有禁用站点存储，然后重试。',
   'app.reload': '重新加载',
+  'app.resetLocalData': '清空本地数据',
+  'app.resetConfirm':
+    '确定要清空本机所有数据吗？食物库、饮食记录和个人资料都会被删除，此操作不可撤销。',
+  'app.resetConfirmButton': '确认清空',
+  'app.resetFailed': '清空失败，请重试或检查浏览器站点存储权限。',
   'app.errorTitle': '页面遇到了一个意外错误',
   'app.errorBody':
     '你的本地记录仍然保存在浏览器数据库中，不会因为这次错误被清空。',

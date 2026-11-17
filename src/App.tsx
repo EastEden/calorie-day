@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   Loader2,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { useI18n } from './i18n';
 import { useApp } from './state/AppContext';
@@ -35,11 +36,31 @@ function AppLoadingScreen() {
 function AppFatalScreen({
   message,
   onRetry,
+  onReset,
 }: {
   message: string;
   onRetry: () => void;
+  onReset: () => Promise<boolean>;
 }) {
   const { t } = useI18n();
+  const [confirmReset, setConfirmReset] = useState(false);
+  const [resetting, setResetting] = useState(false);
+  const [resetError, setResetError] = useState<string | null>(null);
+
+  const handleReset = async () => {
+    setResetting(true);
+    setResetError(null);
+    try {
+      const ok = await onReset();
+      if (!ok) {
+        setResetError(t('app.resetFailed'));
+      }
+    } catch {
+      setResetError(t('app.resetFailed'));
+    } finally {
+      setResetting(false);
+    }
+  };
 
   return (
     <div className="app-status-screen app-status-screen--error">
@@ -49,9 +70,49 @@ function AppFatalScreen({
       <h1>{t('app.fatalTitle')}</h1>
       <p>{message}</p>
       <p className="app-status-screen__hint">{t('app.fatalHint')}</p>
-      <Button icon={<RefreshCw size={16} />} onClick={onRetry}>
-        {t('app.reload')}
-      </Button>
+
+      <div className="app-status-screen__actions">
+        <Button icon={<RefreshCw size={16} />} onClick={onRetry}>
+          {t('app.reload')}
+        </Button>
+        {!confirmReset ? (
+          <Button
+            variant="ghost"
+            icon={<Trash2 size={16} />}
+            onClick={() => setConfirmReset(true)}
+            disabled={resetting}
+          >
+            {t('app.resetLocalData')}
+          </Button>
+        ) : (
+          <div className="app-status-screen__reset-confirm">
+            <p>{t('app.resetConfirm')}</p>
+            {resetError && (
+              <p className="form-error" role="alert">
+                {resetError}
+              </p>
+            )}
+            <div className="app-status-screen__reset-actions">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setConfirmReset(false)}
+                disabled={resetting}
+              >
+                {t('common.cancel')}
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                loading={resetting}
+                onClick={() => void handleReset()}
+              >
+                {t('app.resetConfirmButton')}
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -92,6 +153,7 @@ export default function App() {
       <AppFatalScreen
         message={initializationError ?? t('app.fatalFallback')}
         onRetry={actions.retryInitialization}
+        onReset={actions.resetAllData}
       />
     );
   }
