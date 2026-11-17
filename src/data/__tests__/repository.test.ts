@@ -13,7 +13,10 @@ import type {
   TargetSettings,
   UserProfile,
 } from '../../domain/types';
-import { SEED_FOODS } from '../../data/seedFoods';
+import {
+  INCREMENTAL_SEED_IDS,
+  SEED_FOODS,
+} from '../../data/seedFoods';
 
 let dbName = '';
 let repository: IndexedDbRepository | null = null;
@@ -238,7 +241,7 @@ describe('IndexedDbRepository', () => {
     await reopened.initialize();
     const foods = await reopened.listFoods();
 
-    expect(foods).toHaveLength(57);
+    expect(foods).toHaveLength(SEED_FOODS.length + 1);
     expect(
       foods.some((food) => food.id === 'builtin-black-coffee'),
     ).toBe(true);
@@ -601,7 +604,16 @@ describe('IndexedDbRepository', () => {
     await repo.initialize();
 
     const foods = await repo.listFoods();
-    expect(foods).toHaveLength(1);
+    expect(foods).toHaveLength(1 + INCREMENTAL_SEED_IDS.length);
+    expect(
+      foods.find((food) => food.id === 'builtin-reduced-fat-milk-2'),
+    ).toBeDefined();
+    expect(
+      foods.find((food) => food.id === 'builtin-low-fat-milk-1'),
+    ).toBeDefined();
+    expect(
+      foods.find((food) => food.id === 'builtin-bok-choy-raw'),
+    ).toBeDefined();
     const legacyFood = foods.find((food) => food.id === 'legacy-food');
     expect(legacyFood?.names).toEqual({ 'zh-CN': '旧版鸡胸肉' });
     expect('name' in (legacyFood ?? {})).toBe(false);

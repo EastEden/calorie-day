@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  foodEntrySchema,
   foodImportSchema,
   foodSchema,
   parseFoodImportJson,
@@ -20,12 +21,21 @@ describe('food import schema', () => {
         foodSchema.parse(food);
       }
     }).not.toThrow();
-    expect(SEED_FOODS).toHaveLength(56);
+    expect(SEED_FOODS).toHaveLength(59);
     expect(
       SEED_FOODS.some((food) => food.names['zh-CN'] === '花生油'),
     ).toBe(true);
     expect(
       SEED_FOODS.some((food) => food.names['zh-CN'] === '黑咖啡（无糖）'),
+    ).toBe(true);
+    expect(
+      SEED_FOODS.some((food) => food.names['zh-CN'] === '2% 低脂牛奶'),
+    ).toBe(true);
+    expect(
+      SEED_FOODS.some((food) => food.names['zh-CN'] === '1% 低脂牛奶'),
+    ).toBe(true);
+    expect(
+      SEED_FOODS.some((food) => food.names['zh-CN'] === '上海青（生）'),
     ).toBe(true);
   });
 
@@ -207,6 +217,45 @@ describe('food import schema', () => {
       }),
     );
     expect(result.success).toBe(false);
+  });
+
+  it('reads experimental g/ml foods on the simple gram-based branch', () => {
+    const parsed = foodSchema.parse({
+      id: 'experimental-milk',
+      names: { 'zh-CN': '实验牛奶' },
+      category: 'egg_dairy_soy',
+      basis: 'as_sold',
+      nutritionPer100ml: nutrition,
+      defaultUnit: 'ml',
+      servings: [
+        { id: 'serving-1', label: '杯', amount: 250, unit: 'ml' },
+      ],
+      source: 'custom',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    expect(parsed.nutritionPer100g).toEqual(nutrition);
+    expect(parsed.servings[0]?.grams).toBe(250);
+  });
+
+  it('reads experimental unit-based entries on the simple branch', () => {
+    const parsed = foodEntrySchema.parse({
+      id: 'experimental-entry',
+      foodId: 'experimental-milk',
+      foodNames: { 'zh-CN': '实验牛奶' },
+      amount: 250,
+      unit: 'ml',
+      enteredQuantity: 250,
+      enteredUnit: 'ml',
+      nutritionPer100Snapshot: nutrition,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    expect(parsed.amountGrams).toBe(250);
+    expect(parsed.enteredUnit).toBe('g');
+    expect(parsed.nutritionPer100gSnapshot).toEqual(nutrition);
   });
 
   it('validates the exported v1 payload', () => {

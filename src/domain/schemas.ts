@@ -72,11 +72,32 @@ export const targetNutritionSchema = nutritionSchema.superRefine((value, ctx) =>
   }
 });
 
-export const servingSchema = z.object({
-  id: z.string().min(1).max(120),
-  label: z.string().trim().min(1).max(24),
-  grams: finiteNumber.positive().max(10_000),
-});
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * Temporary compatibility for records created by the experimental
+ * g/ml serving branch. The simple branch stores amounts in grams only.
+ */
+function normalizeServingRecord(value: unknown): unknown {
+  if (!isRecord(value) || 'grams' in value || !('amount' in value)) {
+    return value;
+  }
+  return {
+    ...value,
+    grams: value.amount,
+  };
+}
+
+export const servingSchema = z.preprocess(
+  normalizeServingRecord,
+  z.object({
+    id: z.string().min(1).max(120),
+    label: z.string().trim().min(1).max(24),
+    grams: finiteNumber.positive().max(10_000),
+  }),
+);
 
 export const foodCategorySchema = z.enum([
   'protein',
@@ -125,7 +146,21 @@ export const mealPrepBatchMetaSchema = z
     path: ['portionGrams'],
   });
 
-export const foodSchema = z.object({
+function normalizeFoodRecord(value: unknown): unknown {
+  if (!isRecord(value)) {
+    return value;
+  }
+
+  return {
+    ...value,
+    ...(!('nutritionPer100g' in value) &&
+    isRecord(value.nutritionPer100ml)
+      ? { nutritionPer100g: value.nutritionPer100ml }
+      : {}),
+  };
+}
+
+const foodBaseSchema = z.object({
   id: z.string().min(1).max(120),
   names: localizedTextSchema,
   category: foodCategorySchema,
@@ -138,21 +173,32 @@ export const foodSchema = z.object({
   updatedAt: timestampSchema,
 });
 
-const importedServingSchema = z.object({
-  id: z.string().trim().min(1).max(120).optional(),
-  label: z.string().trim().min(1).max(24),
-  grams: finiteNumber.positive().max(10_000),
-});
+export const foodSchema = z.preprocess(
+  normalizeFoodRecord,
+  foodBaseSchema,
+);
 
-export const importedFoodSchema = z.object({
-  id: z.string().trim().min(1).max(120).optional(),
-  names: localizedTextSchema,
-  category: foodCategorySchema,
-  basis: foodBasisSchema,
-  nutritionPer100g: nutritionSchema,
-  servings: z.array(importedServingSchema).max(20).optional(),
-  batch: mealPrepBatchMetaSchema.optional(),
-});
+const importedServingSchema = z.preprocess(
+  normalizeServingRecord,
+  z.object({
+    id: z.string().trim().min(1).max(120).optional(),
+    label: z.string().trim().min(1).max(24),
+    grams: finiteNumber.positive().max(10_000),
+  }),
+);
+
+export const importedFoodSchema = z.preprocess(
+  normalizeFoodRecord,
+  z.object({
+    id: z.string().trim().min(1).max(120).optional(),
+    names: localizedTextSchema,
+    category: foodCategorySchema,
+    basis: foodBasisSchema,
+    nutritionPer100g: nutritionSchema,
+    servings: z.array(importedServingSchema).max(20).optional(),
+    batch: mealPrepBatchMetaSchema.optional(),
+  }),
+);
 
 export const foodImportSchema = z
   .object({
@@ -197,7 +243,35 @@ export const foodImportSchema = z
 
 export type FoodImportPayload = z.infer<typeof foodImportSchema>;
 
-export const foodEntrySchema = z
+function normalizeEntryRecord(value: unknown): unknown {
+  if (
+    !isRecord(value) ||
+    'amountGrams' in value ||
+    !('amount' in value)
+  ) {
+    return value;
+  }
+
+  const next: Record<string, unknown> = {
+    ...value,
+    amountGrams: value.amount,
+    nutritionPer100gSnapshot: value.nutritionPer100Snapshot,
+  };
+
+  if (value.enteredUnit === 'ml') {
+    next.enteredUnit = 'g';
+    next.enteredQuantity = value.amount;
+  }
+
+  if (value.enteredUnit === 'serving') {
+    next.servingGrams =
+      value.servingAmount ?? value.amount;
+  }
+
+  return next;
+}
+
+const foodEntryBaseSchema = z
   .object({
     id: z.string().min(1).max(120),
     foodId: z.string().min(1).max(120),
@@ -238,6 +312,11 @@ export const foodEntrySchema = z
       }
     }
   });
+
+export const foodEntrySchema = z.preprocess(
+  normalizeEntryRecord,
+  foodEntryBaseSchema,
+);
 
 export const dailyLogSchema = z.object({
   id: z.string().min(1).max(120),
