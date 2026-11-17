@@ -5,6 +5,7 @@ import {
   type ReactNode,
 } from 'react';
 import type {
+  AmountUnit,
   EntryUnit,
   Nutrition,
   ServingOption,
@@ -26,7 +27,8 @@ export interface PortionInitial {
 }
 
 interface PortionFormProps {
-  nutritionPer100g: Nutrition;
+  nutritionByUnit: Partial<Record<AmountUnit, Nutrition>>;
+  defaultUnit: AmountUnit;
   servings: ServingOption[];
   initial?: PortionInitial;
   submitLabel: string;
@@ -40,7 +42,8 @@ function normalizeNumericInput(value: string): number {
 }
 
 export function PortionForm({
-  nutritionPer100g,
+  nutritionByUnit,
+  defaultUnit,
   servings,
   initial,
   submitLabel,
@@ -49,6 +52,10 @@ export function PortionForm({
   secondaryAction,
 }: PortionFormProps) {
   const { t } = useI18n();
+  const hasGrams = Boolean(nutritionByUnit.g);
+  const hasMilliliters = Boolean(nutritionByUnit.ml);
+  const availableServings = hasGrams ? servings : [];
+
   const initialServing = useMemo<ServingOption | null>(() => {
     if (
       initial?.enteredUnit !== 'serving' ||
@@ -58,7 +65,7 @@ export function PortionForm({
       return null;
     }
 
-    const existing = servings.find(
+    const existing = availableServings.find(
       (serving) =>
         serving.label === initial.servingLabel &&
         serving.grams === initial.servingGrams,
@@ -71,55 +78,82 @@ export function PortionForm({
         grams: initial.servingGrams,
       }
     );
-  }, [initial, servings]);
+  }, [availableServings, initial]);
 
-  const availableServings = useMemo(() => {
+  const servingsWithInitial = useMemo(() => {
     if (!initialServing) {
-      return servings;
+      return availableServings;
     }
-    if (servings.some((serving) => serving.id === initialServing.id)) {
-      return servings;
+    if (
+      availableServings.some(
+        (serving) => serving.id === initialServing.id,
+      )
+    ) {
+      return availableServings;
     }
-    return [initialServing, ...servings];
-  }, [initialServing, servings]);
+    return [initialServing, ...availableServings];
+  }, [availableServings, initialServing]);
 
-  const initialUnit: EntryUnit =
-    initial?.enteredUnit ??
-    (availableServings.length > 0 ? 'serving' : 'g');
+  const initialUnit: EntryUnit = (() => {
+    if (initial?.enteredUnit === 'serving' && servingsWithInitial.length > 0) {
+      return 'serving';
+    }
+    if (initial?.enteredUnit === 'ml' && hasMilliliters) {
+      return 'ml';
+    }
+    if (initial?.enteredUnit === 'g' && hasGrams) {
+      return 'g';
+    }
+    if (servingsWithInitial.length > 0) {
+      return 'serving';
+    }
+    return defaultUnit === 'ml' && hasMilliliters ? 'ml' : 'g';
+  })();
+
   const [unit, setUnit] = useState<EntryUnit>(initialUnit);
   const [quantity, setQuantity] = useState(
     initial
       ? String(initial.enteredQuantity)
       : initialUnit === 'serving'
         ? '1'
-        : '100',
+        : initialUnit === 'ml'
+          ? '250'
+          : '100',
   );
   const [servingId, setServingId] = useState(
-    initialServing?.id ?? availableServings[0]?.id ?? '',
+    initialServing?.id ?? servingsWithInitial[0]?.id ?? '',
   );
   const [attempted, setAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   const selectedServing =
-    availableServings.find((serving) => serving.id === servingId) ??
-    availableServings[0];
+    servingsWithInitial.find((serving) => serving.id === servingId) ??
+    servingsWithInitial[0];
 
   const parsedQuantity = normalizeNumericInput(quantity);
-  const grams =
+  const amount =
     unit === 'serving'
       ? parsedQuantity * (selectedServing?.grams ?? 0)
       : parsedQuantity;
+  const amountUnit: AmountUnit = unit === 'ml' ? 'ml' : 'g';
+  const referenceNutrition = nutritionByUnit[amountUnit];
   const isValid =
+    Boolean(referenceNutrition) &&
     Number.isFinite(parsedQuantity) &&
     parsedQuantity > 0 &&
-    Number.isFinite(grams) &&
-    grams > 0 &&
-    grams <= 100_000 &&
-    (unit === 'g' || Boolean(selectedServing));
+    Number.isFinite(amount) &&
+    amount > 0 &&
+    amount <= 100_000 &&
+    (unit === 'g' || unit === 'ml' || Boolean(selectedServing));
   const scaled = scaleNutrition(
-    nutritionPer100g,
-    isValid ? grams / 100 : 0,
+    referenceNutrition ?? {
+      kcal: 0,
+      proteinG: 0,
+      carbsG: 0,
+      fatG: 0,
+    },
+    isValid ? amount / 100 : 0,
   );
   const isBusy = submitting || disabled;
 
@@ -135,18 +169,21 @@ export function PortionForm({
     }
 
     if (nextUnit === 'serving') {
-      const target = selectedServing ?? availableServings[0];
+      const target = selectedServing ?? servingsWithInitial[0];
       if (!target) {
         return;
       }
       if (isValid) {
-        setQuantityFromNumber(grams / target.grams);
+        setQuantityFromNumber(amount / target.grams);
       }
       setServingId(target.id);
-    } else if (isValid) {
-      setQuantityFromNumber(grams);
+      setUnit('serving');
+      return;
     }
 
+    if (unit === 'serving' && isValid) {
+      setQuantityFromNumber(amount);
+    }
     setUnit(nextUnit);
   };
 
@@ -155,20 +192,22 @@ export function PortionForm({
     setAttempted(true);
     setSubmitError(null);
 
-    if (!isValid) {
+    if (!isValid || !referenceNutrition) {
       return;
     }
 
     setSubmitting(true);
     try {
       const ok = await onSubmit({
-        grams,
+        amount,
+        unit: amountUnit,
         enteredQuantity: parsedQuantity,
         enteredUnit: unit,
         servingLabel:
           unit === 'serving' ? selectedServing?.label : undefined,
         servingGrams:
           unit === 'serving' ? selectedServing?.grams : undefined,
+        nutritionPer100Snapshot: referenceNutrition,
       });
       if (!ok) {
         setSubmitError(t('portion.saveError'));
@@ -182,55 +221,89 @@ export function PortionForm({
     }
   };
 
+  const per100Label =
+    unit === 'ml' ? t('portion.per100Ml') : t('portion.per100');
+  const quantityLabel =
+    unit === 'serving'
+      ? t('portion.servingsLabel')
+      : unit === 'ml'
+        ? t('portion.millilitersLabel')
+        : t('portion.gramsLabel');
+  const quantitySuffix =
+    unit === 'serving'
+      ? selectedServing?.label ?? t('portion.servingFallback')
+      : unit === 'ml'
+        ? t('common.ml')
+        : t('common.gram');
+
   return (
     <form className="portion-form" onSubmit={handleSubmit}>
       <div className="portion-form__per100">
-        <span>{t('portion.per100')}</span>
+        <span>{per100Label}</span>
         <strong>
-          {formatKcal(nutritionPer100g.kcal)} {t('common.kcal')}
+          {formatKcal(referenceNutrition?.kcal ?? 0)} {t('common.kcal')}
         </strong>
         <small>
-          {t('common.carbs')} {formatDecimal(nutritionPer100g.carbsG)}
+          {t('common.carbs')}{' '}
+          {formatDecimal(referenceNutrition?.carbsG ?? 0)}
           {t('common.gram')} · {t('common.proteinShort')}{' '}
-          {formatDecimal(nutritionPer100g.proteinG)}
+          {formatDecimal(referenceNutrition?.proteinG ?? 0)}
           {t('common.gram')} · {t('common.fat')}{' '}
-          {formatDecimal(nutritionPer100g.fatG)}
+          {formatDecimal(referenceNutrition?.fatG ?? 0)}
           {t('common.gram')}
         </small>
       </div>
 
-      {availableServings.length > 0 && (
+      {(hasGrams || hasMilliliters || servingsWithInitial.length > 0) && (
         <div
           className="segmented"
           role="group"
           aria-label={t('portion.modeAria')}
         >
-          <button
-            type="button"
-            className={`segmented__option ${unit === 'g' ? 'is-active' : ''}`}
-            onClick={() => switchUnit('g')}
-            disabled={isBusy}
-          >
-            {t('portion.modeGrams')}
-          </button>
-          <button
-            type="button"
-            className={`segmented__option ${
-              unit === 'serving' ? 'is-active' : ''
-            }`}
-            onClick={() => switchUnit('serving')}
-            disabled={isBusy}
-          >
-            {t('portion.modeServing')}
-          </button>
+          {hasGrams && (
+            <button
+              type="button"
+              className={`segmented__option ${
+                unit === 'g' ? 'is-active' : ''
+              }`}
+              onClick={() => switchUnit('g')}
+              disabled={isBusy}
+            >
+              {t('portion.modeGrams')}
+            </button>
+          )}
+          {hasMilliliters && (
+            <button
+              type="button"
+              className={`segmented__option ${
+                unit === 'ml' ? 'is-active' : ''
+              }`}
+              onClick={() => switchUnit('ml')}
+              disabled={isBusy}
+            >
+              {t('portion.modeMl')}
+            </button>
+          )}
+          {servingsWithInitial.length > 0 && (
+            <button
+              type="button"
+              className={`segmented__option ${
+                unit === 'serving' ? 'is-active' : ''
+              }`}
+              onClick={() => switchUnit('serving')}
+              disabled={isBusy}
+            >
+              {t('portion.modeServing')}
+            </button>
+          )}
         </div>
       )}
 
-      {unit === 'serving' && availableServings.length > 0 && (
+      {unit === 'serving' && servingsWithInitial.length > 0 && (
         <div className="serving-picker">
           <span className="field-label">{t('portion.chooseServing')}</span>
           <div className="choice-chips">
-            {availableServings.map((serving) => (
+            {servingsWithInitial.map((serving) => (
               <button
                 type="button"
                 key={serving.id}
@@ -252,11 +325,7 @@ export function PortionForm({
       )}
 
       <div className="amount-field">
-        <label htmlFor="portion-quantity">
-          {unit === 'serving'
-            ? t('portion.servingsLabel')
-            : t('portion.gramsLabel')}
-        </label>
+        <label htmlFor="portion-quantity">{quantityLabel}</label>
         <div className="amount-field__control">
           <input
             id="portion-quantity"
@@ -269,11 +338,7 @@ export function PortionForm({
             aria-describedby="portion-unit-label"
             disabled={isBusy}
           />
-          <span id="portion-unit-label">
-            {unit === 'serving'
-              ? selectedServing?.label ?? t('portion.servingFallback')
-              : t('common.gram')}
-          </span>
+          <span id="portion-unit-label">{quantitySuffix}</span>
         </div>
       </div>
 
@@ -293,17 +358,29 @@ export function PortionForm({
                 {t('portion.quickGram', { value })}
               </button>
             ))
-          : [0.5, 1, 1.5, 2].map((value) => (
-              <button
-                type="button"
-                key={value}
-                className="quick-amount"
-                onClick={() => setQuantity(String(value))}
-                disabled={isBusy}
-              >
-                {t('portion.quickServing', { value })}
-              </button>
-            ))}
+          : unit === 'ml'
+            ? [100, 200, 250, 300].map((value) => (
+                <button
+                  type="button"
+                  key={value}
+                  className="quick-amount"
+                  onClick={() => setQuantity(String(value))}
+                  disabled={isBusy}
+                >
+                  {t('portion.quickMl', { value })}
+                </button>
+              ))
+            : [0.5, 1, 1.5, 2].map((value) => (
+                <button
+                  type="button"
+                  key={value}
+                  className="quick-amount"
+                  onClick={() => setQuantity(String(value))}
+                  disabled={isBusy}
+                >
+                  {t('portion.quickServing', { value })}
+                </button>
+              ))}
       </div>
 
       {attempted && !isValid && (
@@ -328,11 +405,15 @@ export function PortionForm({
               ? t('portion.servingDetail', {
                   quantity: formatDecimal(parsedQuantity || 0),
                   label: selectedServing.label,
-                  grams: formatDecimal(isValid ? grams : 0),
+                  grams: formatDecimal(isValid ? amount : 0),
                 })
-              : t('portion.gramsDetail', {
-                  grams: formatDecimal(isValid ? grams : 0),
-                })}
+              : unit === 'ml'
+                ? t('portion.mlDetail', {
+                    ml: formatDecimal(isValid ? amount : 0),
+                  })
+                : t('portion.gramsDetail', {
+                    grams: formatDecimal(isValid ? amount : 0),
+                  })}
           </small>
         </div>
         <div className="portion-preview__macros">

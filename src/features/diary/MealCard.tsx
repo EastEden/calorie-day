@@ -12,6 +12,7 @@ import {
   formatKcal,
 } from '../../domain/formatters';
 import { getEntryDisplayName } from '../../domain/localizedText';
+import { getEntryNutrition } from '../../domain/nutrition';
 import { useI18n } from '../../i18n';
 import { MealIcon } from '../../ui/MealIcon';
 
@@ -148,10 +149,7 @@ export function MealCard({
                 </span>
               </span>
               <span className="entry-row__energy">
-                {formatKcal(
-                  (entry.nutritionPer100gSnapshot.kcal * entry.amountGrams) /
-                    100,
-                )}
+                {formatKcal(getEntryNutrition(entry).kcal)}
                 <small>{t('common.kcal')}</small>
               </span>
               <ChevronRight

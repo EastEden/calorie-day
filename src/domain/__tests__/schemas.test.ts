@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  foodEntrySchema,
   foodImportSchema,
   foodSchema,
   parseFoodImportJson,
@@ -20,13 +21,33 @@ describe('food import schema', () => {
         foodSchema.parse(food);
       }
     }).not.toThrow();
-    expect(SEED_FOODS).toHaveLength(56);
+    expect(SEED_FOODS).toHaveLength(58);
     expect(
       SEED_FOODS.some((food) => food.names['zh-CN'] === '花生油'),
     ).toBe(true);
     expect(
       SEED_FOODS.some((food) => food.names['zh-CN'] === '黑咖啡（无糖）'),
     ).toBe(true);
+
+    const milkNames = SEED_FOODS.filter((food) =>
+      food.category === 'egg_dairy_soy' && food.names['zh-CN'].includes('牛奶'),
+    ).map((food) => food.names['zh-CN']);
+    expect(milkNames).toEqual(
+      expect.arrayContaining([
+        '全脂牛奶',
+        '2% 低脂牛奶',
+        '1% 低脂牛奶',
+        '脱脂牛奶',
+      ]),
+    );
+    for (const milk of SEED_FOODS.filter((food) =>
+      milkNames.includes(food.names['zh-CN']),
+    )) {
+      expect(milk.defaultUnit).toBe('ml');
+      expect(milk.nutritionPer100g).toBeDefined();
+      expect(milk.nutritionPer100ml).toBeDefined();
+      expect(milk.servings).toHaveLength(0);
+    }
   });
 
   it('parses a valid v1 JSON payload with extra locales', () => {
@@ -207,6 +228,59 @@ describe('food import schema', () => {
       }),
     );
     expect(result.success).toBe(false);
+  });
+
+  it('accepts foods with only per-100ml nutrition', () => {
+    const parsed = foodSchema.safeParse({
+      id: 'milk-only-ml',
+      names: { 'zh-CN': '自定义牛奶' },
+      category: 'egg_dairy_soy',
+      basis: 'as_sold',
+      nutritionPer100ml: nutrition,
+      defaultUnit: 'ml',
+      servings: [],
+      source: 'custom',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    expect(parsed.success).toBe(true);
+  });
+
+  it('rejects foods without any nutrition reference', () => {
+    const parsed = foodSchema.safeParse({
+      id: 'no-nutrition',
+      names: { 'zh-CN': '无营养数据' },
+      category: 'other',
+      basis: 'raw',
+      defaultUnit: 'g',
+      servings: [],
+      source: 'custom',
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    expect(parsed.success).toBe(false);
+  });
+
+  it('normalises legacy gram-based entries to amount + unit', () => {
+    const parsed = foodEntrySchema.parse({
+      id: 'legacy-entry',
+      foodId: 'legacy-food',
+      foodNames: { 'zh-CN': '旧版食物' },
+      amountGrams: 150,
+      enteredQuantity: 1.5,
+      enteredUnit: 'serving',
+      servingLabel: '份',
+      servingGrams: 100,
+      nutritionPer100gSnapshot: nutrition,
+      createdAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+    });
+
+    expect(parsed.amount).toBe(150);
+    expect(parsed.unit).toBe('g');
+    expect(parsed.nutritionPer100Snapshot).toEqual(nutrition);
   });
 
   it('validates the exported v1 payload', () => {

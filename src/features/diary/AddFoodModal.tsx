@@ -21,6 +21,11 @@ import {
 } from '../../domain/constants';
 import { formatKcal } from '../../domain/formatters';
 import {
+  getFoodDefaultNutrition,
+  getFoodDefaultUnit,
+  getFoodNutrition,
+} from '../../domain/measurement';
+import {
   getFoodDisplayName,
   getFoodSearchText,
 } from '../../domain/localizedText';
@@ -106,6 +111,9 @@ export function AddFoodModal({
 
   const meta = MEAL_META[mealType];
   const mealLabel = t(meta.labelKey);
+  const selectedUnit = selectedFood
+    ? getFoodDefaultUnit(selectedFood)
+    : 'g';
 
   return (
     <Modal
@@ -121,7 +129,8 @@ export function AddFoodModal({
         selectedFood
           ? t('addFood.selectedDescription', {
               meal: mealLabel,
-              kcal: formatKcal(selectedFood.nutritionPer100g.kcal),
+              unit: selectedUnit,
+              kcal: formatKcal(getFoodDefaultNutrition(selectedFood).kcal),
             })
           : t('addFood.description', { meal: mealLabel })
       }
@@ -170,6 +179,10 @@ export function AddFoodModal({
               const categoryLabel = t(
                 FOOD_CATEGORY_LABEL_KEYS[food.category],
               );
+              const defaultUnit = getFoodDefaultUnit(food);
+              const defaultNutrition =
+                getFoodNutrition(food, defaultUnit) ??
+                getFoodDefaultNutrition(food);
               return (
                 <button
                   type="button"
@@ -208,8 +221,10 @@ export function AddFoodModal({
                     </small>
                   </span>
                   <span className="food-pick-row__kcal">
-                    {formatKcal(food.nutritionPer100g.kcal)}
-                    <small>{t('common.kcal')}</small>
+                    {formatKcal(defaultNutrition.kcal)}
+                    <small>
+                      {t('common.kcal')} / 100{defaultUnit}
+                    </small>
                   </span>
                   <ChevronRight size={17} aria-hidden="true" />
                 </button>
@@ -240,7 +255,11 @@ export function AddFoodModal({
 
           <PortionForm
             key={selectedFood.id}
-            nutritionPer100g={selectedFood.nutritionPer100g}
+            nutritionByUnit={{
+              g: selectedFood.nutritionPer100g,
+              ml: selectedFood.nutritionPer100ml,
+            }}
+            defaultUnit={getFoodDefaultUnit(selectedFood)}
             servings={selectedFood.servings}
             submitLabel={t('addFood.addTo', { meal: mealLabel })}
             disabled={isSaving}

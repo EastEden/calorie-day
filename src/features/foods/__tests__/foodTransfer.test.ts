@@ -86,6 +86,38 @@ describe('foodTransfer', () => {
     expect(foods[0]?.names['en-US']).toBe('Homemade energy bar');
   });
 
+  it('round-trips per-100ml foods without a density', () => {
+    const milk: Food = {
+      ...existing,
+      id: 'custom-milk',
+      names: { 'zh-CN': '自制牛奶' },
+      category: 'egg_dairy_soy',
+      basis: 'as_sold',
+      nutritionPer100g: undefined,
+      nutritionPer100ml: {
+        kcal: 61,
+        proteinG: 3.2,
+        carbsG: 4.8,
+        fatG: 3.3,
+      },
+      defaultUnit: 'ml',
+      servings: [],
+    };
+
+    const payload = buildFoodExportPayload([milk]);
+    expect(payload.foods[0]?.nutritionPer100ml).toEqual(milk.nutritionPer100ml);
+    expect(payload.foods[0]?.defaultUnit).toBe('ml');
+
+    const parsed = foodImportSchema.parse(payload);
+    const foods = materializeImportedFoods(
+      buildFoodImportPlan([], parsed),
+      false,
+    );
+    expect(foods[0]?.nutritionPer100ml).toEqual(milk.nutritionPer100ml);
+    expect(foods[0]?.nutritionPer100g).toBeUndefined();
+    expect(foods[0]?.defaultUnit).toBe('ml');
+  });
+
   it('exports a payload that can be re-imported', () => {
     const food: Food = {
       ...existing,

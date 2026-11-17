@@ -15,10 +15,11 @@ function makeEntry(overrides: Partial<FoodEntry> = {}): FoodEntry {
     id: 'entry-1',
     foodId: 'food-1',
     foodNames: { 'zh-CN': '测试食物' },
-    amountGrams: 100,
+    amount: 100,
+    unit: 'g',
     enteredQuantity: 100,
     enteredUnit: 'g',
-    nutritionPer100gSnapshot: {
+    nutritionPer100Snapshot: {
       kcal: 200,
       proteinG: 10,
       carbsG: 20,
@@ -47,8 +48,27 @@ describe('nutrition', () => {
     });
   });
 
+  it('calculates ml entries from their per-100ml snapshot', () => {
+    const entry = makeEntry({
+      amount: 250,
+      unit: 'ml',
+      enteredQuantity: 250,
+      enteredUnit: 'ml',
+      nutritionPer100Snapshot: {
+        kcal: 61,
+        proteinG: 3.2,
+        carbsG: 4.8,
+        fatG: 3.3,
+      },
+    });
+
+    const nutrition = getEntryNutrition(entry);
+    expect(nutrition.kcal).toBeCloseTo(152.5);
+    expect(nutrition.proteinG).toBeCloseTo(8);
+  });
+
   it('calculates entry nutrition from a 100g snapshot', () => {
-    const entry = makeEntry({ amountGrams: 150 });
+    const entry = makeEntry({ amount: 150 });
     expect(getEntryNutrition(entry)).toEqual({
       kcal: 300,
       proteinG: 15,
@@ -62,8 +82,9 @@ describe('nutrition', () => {
       makeEntry(),
       makeEntry({
         id: 'entry-2',
-        amountGrams: 50,
-        nutritionPer100gSnapshot: {
+        amount: 50,
+        unit: 'g',
+        nutritionPer100Snapshot: {
           kcal: 100,
           proteinG: 5,
           carbsG: 10,
@@ -104,7 +125,7 @@ describe('nutrition', () => {
   it('builds a complete daily summary from a log and target', () => {
     const log = createEmptyDailyLog('2026-11-13');
     log.meals.breakfast = [makeEntry()];
-    log.meals.lunch = [makeEntry({ id: 'entry-2', amountGrams: 50 })];
+    log.meals.lunch = [makeEntry({ id: 'entry-2', amount: 50 })];
 
     const summary = buildDaySummary(log, {
       kcal: 1000,
@@ -123,7 +144,7 @@ describe('nutrition', () => {
 
   it('reports a negative remaining value when over target', () => {
     const log = createEmptyDailyLog('2026-11-13');
-    log.meals.breakfast = [makeEntry({ amountGrams: 1000 })];
+    log.meals.breakfast = [makeEntry({ amount: 1000 })];
 
     const summary = buildDaySummary(log, {
       kcal: 1000,

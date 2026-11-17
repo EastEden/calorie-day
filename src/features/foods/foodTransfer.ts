@@ -97,7 +97,13 @@ function makeImportedFood(
     names: normalizeLocalizedText(incoming.names),
     category: incoming.category,
     basis: incoming.basis,
-    nutritionPer100g: { ...incoming.nutritionPer100g },
+    ...(incoming.nutritionPer100g
+      ? { nutritionPer100g: { ...incoming.nutritionPer100g } }
+      : {}),
+    ...(incoming.nutritionPer100ml
+      ? { nutritionPer100ml: { ...incoming.nutritionPer100ml } }
+      : {}),
+    defaultUnit: incoming.defaultUnit ?? 'g',
     servings: (incoming.servings ?? []).map((serving) => ({
       id: createId('serving'),
       label: serving.label.trim(),
@@ -144,7 +150,13 @@ export function buildFoodExportPayload(foods: Food[]): {
         names: { ...food.names },
         category: food.category,
         basis: food.basis,
-        nutritionPer100g: { ...food.nutritionPer100g },
+        defaultUnit: food.defaultUnit,
+        ...(food.nutritionPer100g
+          ? { nutritionPer100g: { ...food.nutritionPer100g } }
+          : {}),
+        ...(food.nutritionPer100ml
+          ? { nutritionPer100ml: { ...food.nutritionPer100ml } }
+          : {}),
         servings: food.servings.map((serving) => ({
           id: serving.id,
           label: serving.label,
@@ -169,6 +181,7 @@ export function buildFoodImportTemplate(): string {
         },
         category: 'protein',
         basis: 'raw',
+        defaultUnit: 'g',
         nutritionPer100g: {
           kcal: 165,
           proteinG: 20,

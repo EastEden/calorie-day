@@ -32,6 +32,8 @@ type FoodCategory =
 
 type FoodBasis = 'raw' | 'dry' | 'as_sold';
 
+type AmountUnit = 'g' | 'ml';
+
 /**
  * 语言代码 -> 文本。zh-CN 必须有值，作为兜底。
  * 额外语言不需要提升 schemaVersion。
@@ -45,7 +47,10 @@ interface Food {
   names: LocalizedText;
   category: FoodCategory;
   basis: FoodBasis;
-  nutritionPer100g: Nutrition;
+  // 至少提供一种营养基准；两种都有时可按 g 或 ml 记录
+  nutritionPer100g?: Nutrition;
+  nutritionPer100ml?: Nutrition;
+  defaultUnit: AmountUnit;
   servings: { id: string; label: string; grams: number }[];
   batch?: {
     totalGrams: number;
@@ -70,12 +75,13 @@ interface FoodEntry {
   foodId: string;
   foodNames: LocalizedText; // 名称快照
   batchComponents?: { names: LocalizedText; totalGrams: number }[];
-  amountGrams: number;
+  amount: number; // 与 unit 对应的摄入量
+  unit: AmountUnit; // amount 和快照的营养基准单位
   enteredQuantity: number;
-  enteredUnit: 'g' | 'serving';
+  enteredUnit: 'g' | 'ml' | 'serving';
   servingLabel?: string;
   servingGrams?: number;
-  nutritionPer100gSnapshot: Nutrition; // 快照
+  nutritionPer100Snapshot: Nutrition; // 每 100 unit 的快照
   createdAt: string;
   updatedAt: string;
 }
@@ -111,7 +117,9 @@ interface TargetSettings {
 ## 3. IndexedDB 存储
 
 数据库：`calorie-day`，版本 `2`。保留从 v1 升级时将 `name` / `foodName` 转为
-`names` / `foodNames` 的兼容迁移。
+`names` / `foodNames` 的兼容迁移。旧记录中的 `amountGrams` /
+`nutritionPer100gSnapshot` 在读取时规范化为 `amount: g` /
+`nutritionPer100Snapshot`，不需要写入迁移。
 
 内置食物 `seedVersion` 当前为 `1`。检测到旧 seedVersion 时，只删除并重写
 `source: "builtin"` 的内置食物，自定义 / 导入食物、日志、个人资料和目标设置不受影响。
@@ -131,7 +139,7 @@ interface TargetSettings {
 
 ### 4.1 食物条目保存快照
 
-`FoodEntry` 同时保存食物名称映射、每 100g 营养和实际克数。这样：
+`FoodEntry` 同时保存食物名称映射、摄入单位、对应单位的每 100 营养快照和摄入量。这样：
 
 - 修改食物库、切换界面语言或增加翻译不会改变历史记录的结构。
 - 删除食物后，已经记录的数据仍能显示和编辑。
@@ -148,10 +156,17 @@ interface TargetSettings {
 - 搜索会匹配所有语言名称；导入冲突匹配优先使用稳定 `id`，名称匹配使用 `zh-CN` 规范化值。
 - 未来后端可以把映射展开成 `food_translations(food_id, locale, name)`，API DTO 仍返回映射，前端无需改展示模型。
 
-### 4.2 克数是统一计量
+### 4.2 摄入单位与营养基准
 
-无论用户按克还是按份输入，最终都换算成 `amountGrams`。份量信息只用于展示和再次编辑。
-未来需要统计或接入营养数据库时，统一使用克数最稳定。
+食物可以只提供每 100g、只提供每 100ml，或两者都提供：
+
+- 只有一种基准时，记录表单只显示对应单位。
+- 两种都有时，用户可以在 g / ml 之间切换。
+- `FoodEntry.unit` 与 `nutritionPer100Snapshot` 必须对应；250ml 牛奶直接使用
+  每 100ml 快照计算，不需要密度换算。
+- 当前阶段不保存密度。旧记录统一规范化为 `unit: "g"`，历史营养快照保持不变。
+- 按份记录只适用于带克重 servings 的食物；份量仍会换算成克后写入 `amount/unit`。
+- 备餐暂未改为按份统计，内部把 ml 食材按 `1ml = 1g` 计入克重；这是唯一的临时假设。
 
 ### 4.3 日期是本地日期
 
@@ -176,7 +191,7 @@ interface TargetSettings {
 - `portions`：总份数；`portionGrams = totalGrams / portions` 自动计算。
 - `sourceFoodId`：旧版单项备餐的来源食物（兼容字段）。
 - `disposedAt`：剩余部分被确认吃完的时间；存在时剩余量视为 0，不计入摄入。
-- 剩余量 = `totalGrams - sum(该 foodId 的所有 FoodEntry.amountGrams)`。
+- 剩余量 = `totalGrams - sum(该 foodId 的所有 FoodEntry.amount)`；当前备餐仍按克统计，ml 食材按 1:1 计入。
 - 剩余量降到 0 或点击「确认吃完」后，备餐会从进行中列表自动移除。
 
 备餐是全局数据，不绑定某一天。记录时可以单独选择日期和餐次，因此支持“今晚做好、
@@ -267,7 +282,7 @@ interface BackupImportResult {
 
 - `schemaVersion: 1`，顶层为 `days` 数组，每天包含 `date` 和四餐 `meals`。
 - 每条记录包含 `name`、`amountGrams` 和本次摄入总量的 `nutrition`。
-- 营养按总量填写；导入时换算为 `nutritionPer100gSnapshot` 写入记录快照。
+- 营养按总量填写；导入时固定按克换算为 `nutritionPer100Snapshot` 写入记录快照。
 - 不创建食物库条目，只写入对应日期的饮食记录；同一天按餐次追加合并。
 - 导入弹窗内置一段可复制的 AI 提示词，指导外部 AI 输出该格式；涉及多天时，提示词要求 AI 先向用户确认日期范围，再输出 JSON，并明确要求使用英文半角引号、合法数组和空餐次数组。
 - 提示词要求 AI 只输出一个紧凑单行的 json 代码块，块内是原始 JSON；导入修复逻辑会去掉代码块标记。

@@ -142,7 +142,10 @@ export function BatchPortionModal({
           <>
             <PortionForm
               key={`${batch.id}-${open}`}
-              nutritionPer100g={batch.nutritionPer100g}
+              nutritionByUnit={{
+                g: batch.nutritionPer100g,
+              }}
+              defaultUnit="g"
               servings={batch.servings}
               initial={{
                 enteredQuantity:
@@ -154,7 +157,7 @@ export function BatchPortionModal({
               submitLabel={t('batch.recordSubmit', { meal: mealLabel })}
               disabled={isBusy || remaining <= 0}
               onSubmit={async (amount) => {
-                if (amount.grams > remaining + 0.001) {
+                if (amount.amount > remaining + 0.001) {
                   setSubmitError(t('batch.overRemaining'));
                   return false;
                 }

@@ -28,12 +28,15 @@ interface ShareCardProps {
 }
 
 function formatShareAmount(entry: FoodEntry, gramUnit: string): string {
+  if (entry.enteredUnit === 'ml') {
+    return `${formatDecimal(entry.enteredQuantity)} ml`;
+  }
   if (entry.enteredUnit === 'serving' && entry.servingLabel) {
     return `${formatDecimal(entry.enteredQuantity)} ${entry.servingLabel} · ${formatDecimal(
-      entry.amountGrams,
+      entry.amount,
     )}${gramUnit}`;
   }
-  return `${formatDecimal(entry.amountGrams)}${gramUnit}`;
+  return `${formatDecimal(entry.amount)}${entry.unit === 'ml' ? 'ml' : gramUnit}`;
 }
 
 function ShareMeal({

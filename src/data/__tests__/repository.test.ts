@@ -65,7 +65,8 @@ function makeBackupLog(date = '2026-11-14'): DailyLog {
   const log = createEmptyDailyLog(date);
   log.meals.breakfast.push(
     createFoodEntry(backupFood, {
-      grams: 120,
+      amount: 120,
+      unit: 'g',
       enteredQuantity: 120,
       enteredUnit: 'g',
     }),
@@ -238,7 +239,7 @@ describe('IndexedDbRepository', () => {
     await reopened.initialize();
     const foods = await reopened.listFoods();
 
-    expect(foods).toHaveLength(57);
+    expect(foods).toHaveLength(SEED_FOODS.length + 1);
     expect(
       foods.some((food) => food.id === 'builtin-black-coffee'),
     ).toBe(true);
@@ -271,7 +272,8 @@ describe('IndexedDbRepository', () => {
 
     const log = makeLog();
     const entry = createFoodEntry(food!, {
-      grams: 150,
+      amount: 150,
+      unit: 'g',
       enteredQuantity: 150,
       enteredUnit: 'g',
     });
@@ -289,7 +291,7 @@ describe('IndexedDbRepository', () => {
     expect(loaded?.meals.breakfast[0]?.foodNames['zh-CN']).toBe(
       food!.names['zh-CN'],
     );
-    expect(loaded?.meals.breakfast[0]?.amountGrams).toBe(150);
+    expect(loaded?.meals.breakfast[0]?.amount).toBe(150);
     expect(loaded?.revision).toBe(1);
   });
 
@@ -366,7 +368,8 @@ describe('IndexedDbRepository', () => {
     const existingLog = makeLog('2026-11-13');
     existingLog.meals.lunch.push(
       createFoodEntry(SEED_FOODS[0]!, {
-        grams: 100,
+        amount: 100,
+        unit: 'g',
         enteredQuantity: 100,
         enteredUnit: 'g',
       }),
@@ -376,7 +379,8 @@ describe('IndexedDbRepository', () => {
     const incomingExisting = makeLog('2026-11-13');
     incomingExisting.meals.breakfast.push(
       createFoodEntry(SEED_FOODS[1]!, {
-        grams: 120,
+        amount: 120,
+        unit: 'g',
         enteredQuantity: 120,
         enteredUnit: 'g',
       }),
@@ -384,7 +388,8 @@ describe('IndexedDbRepository', () => {
     const incomingNew = makeLog('2026-11-14');
     incomingNew.meals.dinner.push(
       createFoodEntry(SEED_FOODS[2]!, {
-        grams: 200,
+        amount: 200,
+        unit: 'g',
         enteredQuantity: 200,
         enteredUnit: 'g',
       }),
@@ -424,7 +429,8 @@ describe('IndexedDbRepository', () => {
       const log = makeLog(date);
       log.meals.lunch.push(
         createFoodEntry(batchFood, {
-          grams,
+          amount: grams,
+          unit: 'g',
           enteredQuantity: grams,
           enteredUnit: 'g',
         }),
@@ -509,7 +515,8 @@ describe('IndexedDbRepository', () => {
     const log = makeLog();
     log.meals.breakfast.push(
       createFoodEntry(food, {
-        grams: 100,
+        amount: 100,
+        unit: 'g',
         enteredQuantity: 100,
         enteredUnit: 'g',
       }),
@@ -540,7 +547,8 @@ describe('IndexedDbRepository', () => {
         ...saved.meals,
         lunch: [
           createFoodEntry(food, {
-            grams: 80,
+            amount: 80,
+            unit: 'g',
             enteredQuantity: 80,
             enteredUnit: 'g',
           }),
@@ -578,7 +586,8 @@ describe('IndexedDbRepository', () => {
     const log = makeLog();
     log.meals.breakfast.push(
       createFoodEntry(food, {
-        grams: 100,
+        amount: 100,
+        unit: 'g',
         enteredQuantity: 100,
         enteredUnit: 'g',
       }),
@@ -601,10 +610,22 @@ describe('IndexedDbRepository', () => {
     await repo.initialize();
 
     const foods = await repo.listFoods();
-    expect(foods).toHaveLength(1);
+    expect(foods).toHaveLength(1 + 4);
     const legacyFood = foods.find((food) => food.id === 'legacy-food');
     expect(legacyFood?.names).toEqual({ 'zh-CN': '旧版鸡胸肉' });
     expect('name' in (legacyFood ?? {})).toBe(false);
+    expect(legacyFood?.defaultUnit).toBe('g');
+
+    const wholeMilk = foods.find((food) => food.id === 'builtin-whole-milk');
+    expect(wholeMilk?.defaultUnit).toBe('ml');
+    expect(wholeMilk?.nutritionPer100g).toBeDefined();
+    expect(wholeMilk?.nutritionPer100ml).toBeDefined();
+    expect(
+      foods.find((food) => food.id === 'builtin-reduced-fat-milk-2'),
+    ).toBeDefined();
+    expect(
+      foods.find((food) => food.id === 'builtin-low-fat-milk-1'),
+    ).toBeDefined();
 
     const log = await repo.getDailyLog('2026-11-13');
     expect(log?.meals.breakfast[0]?.foodNames).toEqual({
@@ -613,6 +634,11 @@ describe('IndexedDbRepository', () => {
     expect(
       'foodName' in (log?.meals.breakfast[0] ?? {}),
     ).toBe(false);
+    expect(log?.meals.breakfast[0]?.amount).toBe(100);
+    expect(log?.meals.breakfast[0]?.unit).toBe('g');
+    expect(
+      log?.meals.breakfast[0]?.nutritionPer100Snapshot,
+    ).toEqual(legacyFood?.nutritionPer100g);
 
     const rawDb = await new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open(dbName);

@@ -54,6 +54,7 @@ describe('localizedText', () => {
         carbsG: 0,
         fatG: 2,
       },
+      defaultUnit: 'g',
       servings: [],
       source: 'custom',
       createdAt: '2026-01-01T00:00:00.000Z',

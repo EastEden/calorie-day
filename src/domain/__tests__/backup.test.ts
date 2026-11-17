@@ -40,7 +40,8 @@ function makeLog(date: string): DailyLog {
   const log = createEmptyDailyLog(date);
   log.meals.breakfast.push(
     createFoodEntry(food, {
-      grams: 100,
+      amount: 100,
+      unit: 'g',
       enteredQuantity: 100,
       enteredUnit: 'g',
     }),

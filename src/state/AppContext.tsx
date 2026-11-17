@@ -37,6 +37,7 @@ import {
   updateEntryInLog,
   type EntryAmountInput,
 } from '../domain/logFactory';
+import { getBatchNutritionPer100g } from '../domain/measurement';
 import {
   addNutrition,
   buildDaySummary,
@@ -768,6 +769,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                   entry.nutrition,
                   100 / entry.amountGrams,
                 ),
+                defaultUnit: 'g',
                 servings: [],
                 source: 'imported',
                 createdAt: now,
@@ -775,7 +777,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
               };
               log.meals[mealType].push(
                 createFoodEntry(food, {
-                  grams: entry.amountGrams,
+                  amount: entry.amountGrams,
+                  unit: 'g',
                   enteredQuantity: entry.amountGrams,
                   enteredUnit: 'g',
                 }),
@@ -854,12 +857,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         fatG: 0,
       };
       for (const component of input.components) {
+        const per100 = getBatchNutritionPer100g(component.food);
+        if (!per100) {
+          throw new Error(translate('batch.invalidComponents'));
+        }
         totals = addNutrition(
           totals,
-          scaleNutrition(
-            component.food.nutritionPer100g,
-            component.grams / 100,
-          ),
+          scaleNutrition(per100, component.grams / 100),
         );
       }
 
@@ -873,6 +877,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         category: 'other',
         basis: 'as_sold',
         nutritionPer100g: scaleNutrition(totals, 100 / totalGrams),
+        defaultUnit: 'g',
         servings: [],
         batch: {
           totalGrams,
@@ -883,7 +888,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             names: { ...component.food.names },
             totalGrams: component.grams,
             nutritionPer100g: {
-              ...component.food.nutritionPer100g,
+              ...getBatchNutritionPer100g(component.food)!,
             },
           })),
         },
@@ -912,7 +917,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         names: draft.names,
         category: draft.category,
         basis: draft.basis,
-        nutritionPer100g: { ...draft.nutritionPer100g },
+        ...(draft.nutritionPer100g
+          ? { nutritionPer100g: { ...draft.nutritionPer100g } }
+          : {}),
+        ...(draft.nutritionPer100ml
+          ? { nutritionPer100ml: { ...draft.nutritionPer100ml } }
+          : {}),
+        defaultUnit: draft.defaultUnit,
         servings: draft.servings.map((serving) => ({
           id: createId('serving'),
           label: serving.label.trim(),
@@ -951,7 +962,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         names: draft.names,
         category: draft.category,
         basis: draft.basis,
-        nutritionPer100g: { ...draft.nutritionPer100g },
+        ...(draft.nutritionPer100g
+          ? { nutritionPer100g: { ...draft.nutritionPer100g } }
+          : {}),
+        ...(draft.nutritionPer100ml
+          ? { nutritionPer100ml: { ...draft.nutritionPer100ml } }
+          : {}),
+        defaultUnit: draft.defaultUnit,
         servings: draft.servings.map((serving) => ({
           id: createId('serving'),
           label: serving.label.trim(),

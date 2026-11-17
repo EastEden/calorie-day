@@ -6,6 +6,7 @@ import { Trash2 } from 'lucide-react';
 import type { FoodEntry, MealType } from '../../domain/types';
 import { MEAL_META } from '../../domain/constants';
 import { formatKcal } from '../../domain/formatters';
+import { getEntryNutrition } from '../../domain/nutrition';
 import { getEntryDisplayName } from '../../domain/localizedText';
 import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
@@ -97,14 +98,15 @@ export function EntryEditorModal({
       description={t('entry.description', {
         meal: t(MEAL_META[mealType].labelKey),
         name: getEntryDisplayName(entry, locale),
-        kcal: formatKcal(
-          (entry.nutritionPer100gSnapshot.kcal * entry.amountGrams) / 100,
-        ),
+        kcal: formatKcal(getEntryNutrition(entry).kcal),
       })}
     >
       <PortionForm
         key={entry.id}
-        nutritionPer100g={entry.nutritionPer100gSnapshot}
+        nutritionByUnit={{
+          [entry.unit]: entry.nutritionPer100Snapshot,
+        }}
+        defaultUnit={entry.unit}
         servings={servings}
         initial={initial}
         submitLabel={t('portion.submit')}

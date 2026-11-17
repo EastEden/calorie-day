@@ -8,6 +8,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import type {
+  AmountUnit,
   Food,
   FoodBasis,
   FoodCategory,
@@ -64,6 +65,7 @@ export function FoodEditorModal({
   const [name, setName] = useState('');
   const [category, setCategory] = useState<FoodCategory>('protein');
   const [basis, setBasis] = useState<FoodBasis>('raw');
+  const [nutritionUnit, setNutritionUnit] = useState<AmountUnit>('g');
   const [kcal, setKcal] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
@@ -80,13 +82,24 @@ export function FoodEditorModal({
       return;
     }
 
+    const initialUnit: AmountUnit =
+      food?.nutritionPer100g
+        ? food.defaultUnit === 'ml' && food.nutritionPer100ml
+          ? 'ml'
+          : 'g'
+        : 'ml';
+    const nutrition =
+      initialUnit === 'ml'
+        ? food?.nutritionPer100ml
+        : food?.nutritionPer100g;
     setName(food?.names['zh-CN'] ?? '');
     setCategory(food?.category ?? 'protein');
     setBasis(food?.basis ?? 'raw');
-    setKcal(food ? String(food.nutritionPer100g.kcal) : '');
-    setProtein(food ? String(food.nutritionPer100g.proteinG) : '');
-    setCarbs(food ? String(food.nutritionPer100g.carbsG) : '');
-    setFat(food ? String(food.nutritionPer100g.fatG) : '');
+    setNutritionUnit(initialUnit);
+    setKcal(nutrition ? String(nutrition.kcal) : '');
+    setProtein(nutrition ? String(nutrition.proteinG) : '');
+    setCarbs(nutrition ? String(nutrition.carbsG) : '');
+    setFat(nutrition ? String(nutrition.fatG) : '');
     setServings(makeServingRows(food));
     setErrors({});
     setSubmitting(false);
@@ -102,6 +115,25 @@ export function FoodEditorModal({
   const description = food
     ? t('foodEditor.descriptionEdit', { source: sourceLabel ?? '' })
     : t('foodEditor.descriptionAdd');
+
+  const switchNutritionUnit = (nextUnit: AmountUnit) => {
+    if (nextUnit === nutritionUnit) {
+      return;
+    }
+    const reference =
+      nextUnit === 'ml'
+        ? food?.nutritionPer100ml
+        : food?.nutritionPer100g;
+    setNutritionUnit(nextUnit);
+    setKcal(reference ? String(reference.kcal) : '');
+    setProtein(reference ? String(reference.proteinG) : '');
+    setCarbs(reference ? String(reference.carbsG) : '');
+    setFat(reference ? String(reference.fatG) : '');
+    setErrors((current) => ({
+      ...current,
+      nutrition: undefined,
+    }));
+  };
 
   const validate = (): FieldErrors => {
     const next: FieldErrors = {};
@@ -159,16 +191,20 @@ export function FoodEditorModal({
       return;
     }
 
+    const nutrition = {
+      kcal: Number(kcal),
+      proteinG: Number(protein),
+      carbsG: Number(carbs),
+      fatG: Number(fat),
+    };
     const draft = {
       names: withZhCnName(food?.names, name),
       category,
       basis,
-      nutritionPer100g: {
-        kcal: Number(kcal),
-        proteinG: Number(protein),
-        carbsG: Number(carbs),
-        fatG: Number(fat),
-      },
+      defaultUnit: nutritionUnit,
+      ...(nutritionUnit === 'g'
+        ? { nutritionPer100g: nutrition }
+        : { nutritionPer100ml: nutrition }),
       servings: servings.map((serving) => ({
         label: serving.label.trim(),
         grams: Number(serving.grams),
@@ -332,7 +368,41 @@ export function FoodEditorModal({
         </fieldset>
 
         <fieldset className="form-section form-section--plain">
-          <legend className="field-label">{t('foodEditor.per100')}</legend>
+          <legend className="field-label">
+            {t('foodEditor.nutritionUnit')}
+          </legend>
+          <div
+            className="segmented segmented--wide"
+            role="group"
+            aria-label={t('foodEditor.nutritionUnit')}
+          >
+            {(['g', 'ml'] as const).map((option) => (
+              <button
+                type="button"
+                key={option}
+                className={`segmented__option ${
+                  nutritionUnit === option ? 'is-active' : ''
+                }`}
+                aria-pressed={nutritionUnit === option}
+                onClick={() => switchNutritionUnit(option)}
+              >
+                {option === 'g'
+                  ? t('foodEditor.unitG')
+                  : t('foodEditor.unitMl')}
+              </button>
+            ))}
+          </div>
+          <p className="field-hint">
+            {t('foodEditor.nutritionUnitHint')}
+          </p>
+        </fieldset>
+
+        <fieldset className="form-section form-section--plain">
+          <legend className="field-label">
+            {nutritionUnit === 'ml'
+              ? t('foodEditor.per100Ml')
+              : t('foodEditor.per100')}
+          </legend>
           <div className="nutrition-input-grid">
             <label className="field">
               <span>{t('common.calories')}</span>

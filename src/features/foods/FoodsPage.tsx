@@ -21,6 +21,10 @@ import {
 import { formatDecimal, formatKcal } from '../../domain/formatters';
 import { getTodayIso } from '../../domain/dates';
 import {
+  getFoodDefaultNutrition,
+  getFoodDefaultUnit,
+} from '../../domain/measurement';
+import {
   getFoodDisplayName,
   getFoodSearchText,
 } from '../../domain/localizedText';
@@ -182,7 +186,11 @@ export function FoodsPage() {
 
       {filteredFoods.length > 0 ? (
         <div className="food-grid">
-          {filteredFoods.map((food) => (
+          {filteredFoods.map((food) => {
+            const unit = getFoodDefaultUnit(food);
+            const per100 = getFoodDefaultNutrition(food);
+
+            return (
             <button
               type="button"
               key={food.id}
@@ -201,30 +209,30 @@ export function FoodsPage() {
               </div>
               <h3>{getFoodDisplayName(food, locale)}</h3>
               <div className="food-card__energy">
-                <strong>{formatKcal(food.nutritionPer100g.kcal)}</strong>
+                <strong>{formatKcal(per100.kcal)}</strong>
                 <span>
-                  {t('common.kcal')} / 100g
+                  {t('common.kcal')} / 100{unit}
                 </span>
               </div>
               <div className="food-card__macros">
                 <span>
                   {t('common.carbs')}{' '}
                   <strong>
-                    {formatDecimal(food.nutritionPer100g.carbsG)}
+                    {formatDecimal(per100.carbsG)}
                     {t('common.gram')}
                   </strong>
                 </span>
                 <span>
                   {t('common.proteinShort')}{' '}
                   <strong>
-                    {formatDecimal(food.nutritionPer100g.proteinG)}
+                    {formatDecimal(per100.proteinG)}
                     {t('common.gram')}
                   </strong>
                 </span>
                 <span>
                   {t('common.fat')}{' '}
                   <strong>
-                    {formatDecimal(food.nutritionPer100g.fatG)}
+                    {formatDecimal(per100.fatG)}
                     {t('common.gram')}
                   </strong>
                 </span>
@@ -238,7 +246,8 @@ export function FoodsPage() {
                 </span>
               </div>
             </button>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="empty-panel">

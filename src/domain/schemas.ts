@@ -90,6 +90,8 @@ export const foodCategorySchema = z.enum([
 
 export const foodBasisSchema = z.enum(['raw', 'dry', 'as_sold']);
 
+export const amountUnitSchema = z.enum(['g', 'ml']);
+
 export const foodSourceSchema = z.enum(['builtin', 'custom', 'imported']);
 
 export const timestampSchema = z
@@ -125,18 +127,30 @@ export const mealPrepBatchMetaSchema = z
     path: ['portionGrams'],
   });
 
-export const foodSchema = z.object({
-  id: z.string().min(1).max(120),
-  names: localizedTextSchema,
-  category: foodCategorySchema,
-  basis: foodBasisSchema,
-  nutritionPer100g: nutritionSchema,
-  servings: z.array(servingSchema).max(20),
-  batch: mealPrepBatchMetaSchema.optional(),
-  source: foodSourceSchema,
-  createdAt: timestampSchema,
-  updatedAt: timestampSchema,
-});
+export const foodSchema = z
+  .object({
+    id: z.string().min(1).max(120),
+    names: localizedTextSchema,
+    category: foodCategorySchema,
+    basis: foodBasisSchema,
+    nutritionPer100g: nutritionSchema.optional(),
+    nutritionPer100ml: nutritionSchema.optional(),
+    defaultUnit: amountUnitSchema.default('g'),
+    servings: z.array(servingSchema).max(20),
+    batch: mealPrepBatchMetaSchema.optional(),
+    source: foodSourceSchema,
+    createdAt: timestampSchema,
+    updatedAt: timestampSchema,
+  })
+  .superRefine((food, ctx) => {
+    if (!food.nutritionPer100g && !food.nutritionPer100ml) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['nutritionPer100g'],
+        message: '食物至少需要提供每100g或每100ml营养数据',
+      });
+    }
+  });
 
 const importedServingSchema = z.object({
   id: z.string().trim().min(1).max(120).optional(),
@@ -144,15 +158,27 @@ const importedServingSchema = z.object({
   grams: finiteNumber.positive().max(10_000),
 });
 
-export const importedFoodSchema = z.object({
-  id: z.string().trim().min(1).max(120).optional(),
-  names: localizedTextSchema,
-  category: foodCategorySchema,
-  basis: foodBasisSchema,
-  nutritionPer100g: nutritionSchema,
-  servings: z.array(importedServingSchema).max(20).optional(),
-  batch: mealPrepBatchMetaSchema.optional(),
-});
+export const importedFoodSchema = z
+  .object({
+    id: z.string().trim().min(1).max(120).optional(),
+    names: localizedTextSchema,
+    category: foodCategorySchema,
+    basis: foodBasisSchema,
+    nutritionPer100g: nutritionSchema.optional(),
+    nutritionPer100ml: nutritionSchema.optional(),
+    defaultUnit: amountUnitSchema.default('g'),
+    servings: z.array(importedServingSchema).max(20).optional(),
+    batch: mealPrepBatchMetaSchema.optional(),
+  })
+  .superRefine((food, ctx) => {
+    if (!food.nutritionPer100g && !food.nutritionPer100ml) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['nutritionPer100g'],
+        message: '食物至少需要提供每100g或每100ml营养数据',
+      });
+    }
+  });
 
 export const foodImportSchema = z
   .object({
@@ -197,7 +223,7 @@ export const foodImportSchema = z
 
 export type FoodImportPayload = z.infer<typeof foodImportSchema>;
 
-export const foodEntrySchema = z
+const foodEntryBaseSchema = z
   .object({
     id: z.string().min(1).max(120),
     foodId: z.string().min(1).max(120),
@@ -211,12 +237,13 @@ export const foodEntrySchema = z
       )
       .max(50)
       .optional(),
-    amountGrams: finiteNumber.positive().max(100_000),
+    amount: finiteNumber.positive().max(100_000),
+    unit: amountUnitSchema,
     enteredQuantity: finiteNumber.positive().max(100_000),
-    enteredUnit: z.enum(['g', 'serving']),
+    enteredUnit: z.enum(['g', 'ml', 'serving']),
     servingLabel: z.string().trim().min(1).max(24).optional(),
     servingGrams: finiteNumber.positive().max(10_000).optional(),
-    nutritionPer100gSnapshot: nutritionSchema,
+    nutritionPer100Snapshot: nutritionSchema,
     createdAt: timestampSchema,
     updatedAt: timestampSchema,
   })
@@ -238,6 +265,29 @@ export const foodEntrySchema = z
       }
     }
   });
+
+/**
+ * Older entries stored amountGrams and a per-100g snapshot. Normalise them at
+ * read time so the rest of the app only deals with amount + unit.
+ */
+export const foodEntrySchema = z.preprocess((value) => {
+  if (
+    typeof value !== 'object' ||
+    value === null ||
+    Array.isArray(value) ||
+    !('amountGrams' in value)
+  ) {
+    return value;
+  }
+
+  const legacy = value as Record<string, unknown>;
+  return {
+    ...legacy,
+    amount: legacy.amountGrams,
+    unit: 'g',
+    nutritionPer100Snapshot: legacy.nutritionPer100gSnapshot,
+  };
+}, foodEntryBaseSchema);
 
 export const dailyLogSchema = z.object({
   id: z.string().min(1).max(120),

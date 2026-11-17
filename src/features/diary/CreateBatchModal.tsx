@@ -28,6 +28,10 @@ import {
 } from '../../domain/localizedText';
 import { addNutrition, scaleNutrition } from '../../domain/nutrition';
 import type { Food, FoodCategory } from '../../domain/types';
+import {
+  getBatchNutritionPer100g,
+  getFoodDefaultNutrition,
+} from '../../domain/measurement';
 import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { Button } from '../../ui/Button';
@@ -147,9 +151,13 @@ export function CreateBatchModal({
       if (!item.food || !Number.isFinite(item.grams) || item.grams <= 0) {
         return total;
       }
+      const per100 = getBatchNutritionPer100g(item.food);
+      if (!per100) {
+        return total;
+      }
       return addNutrition(
         total,
-        scaleNutrition(item.food.nutritionPer100g, item.grams / 100),
+        scaleNutrition(per100, item.grams / 100),
       );
     },
     { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 },
@@ -397,7 +405,7 @@ export function CreateBatchModal({
                     </small>
                   </span>
                   <span className="food-pick-row__kcal">
-                    {formatKcal(food.nutritionPer100g.kcal)}
+                    {formatKcal(getFoodDefaultNutrition(food).kcal)}
                     <small>{t('common.kcal')}</small>
                   </span>
                   <ChevronRight size={17} aria-hidden="true" />

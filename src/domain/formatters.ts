@@ -54,15 +54,19 @@ export function formatSignedKcal(value: number): string {
 }
 
 export function formatEntryAmount(entry: FoodEntry): string {
+  if (entry.enteredUnit === 'ml') {
+    return `${formatDecimal(entry.enteredQuantity)} ml`;
+  }
+
   if (
     entry.enteredUnit === 'serving' &&
     entry.servingLabel &&
     Number.isFinite(entry.enteredQuantity)
   ) {
     return `${formatDecimal(entry.enteredQuantity)} ${entry.servingLabel} · ${formatDecimal(
-      entry.amountGrams,
+      entry.amount,
     )} g`;
   }
 
-  return `${formatDecimal(entry.amountGrams)} g`;
+  return `${formatDecimal(entry.amount)} ${entry.unit}`;
 }

@@ -1,19 +1,23 @@
 import { nowIsoTimestamp } from './dates';
 import { createId } from './id';
 import type {
+  AmountUnit,
   DailyLog,
   EntryUnit,
   Food,
   FoodEntry,
   MealType,
+  Nutrition,
 } from './types';
 
 export interface EntryAmountInput {
-  grams: number;
+  amount: number;
+  unit: AmountUnit;
   enteredQuantity: number;
   enteredUnit: EntryUnit;
   servingLabel?: string;
   servingGrams?: number;
+  nutritionPer100Snapshot?: Nutrition;
 }
 
 export function createEmptyDailyLog(date: string): DailyLog {
@@ -40,6 +44,19 @@ export function createFoodEntry(
   amount: EntryAmountInput,
 ): FoodEntry {
   const now = nowIsoTimestamp();
+  const nutritionSnapshot =
+    amount.nutritionPer100Snapshot ??
+    (amount.unit === 'ml'
+      ? food.nutritionPer100ml
+      : food.nutritionPer100g);
+  if (!nutritionSnapshot) {
+    throw new Error(
+      amount.unit === 'ml'
+        ? '该食物没有每100ml营养数据'
+        : '该食物没有每100g营养数据',
+    );
+  }
+
   return {
     id: createId('entry'),
     foodId: food.id,
@@ -52,12 +69,13 @@ export function createFoodEntry(
           })),
         }
       : {}),
-    amountGrams: amount.grams,
+    amount: amount.amount,
+    unit: amount.unit,
     enteredQuantity: amount.enteredQuantity,
     enteredUnit: amount.enteredUnit,
     servingLabel: amount.servingLabel,
     servingGrams: amount.servingGrams,
-    nutritionPer100gSnapshot: { ...food.nutritionPer100g },
+    nutritionPer100Snapshot: { ...nutritionSnapshot },
     createdAt: now,
     updatedAt: now,
   };
@@ -69,11 +87,19 @@ export function applyEntryAmount(
 ): FoodEntry {
   return {
     ...entry,
-    amountGrams: amount.grams,
+    amount: amount.amount,
+    unit: amount.unit,
     enteredQuantity: amount.enteredQuantity,
     enteredUnit: amount.enteredUnit,
     servingLabel: amount.servingLabel,
     servingGrams: amount.servingGrams,
+    ...(amount.nutritionPer100Snapshot
+      ? {
+          nutritionPer100Snapshot: {
+            ...amount.nutritionPer100Snapshot,
+          },
+        }
+      : {}),
     updatedAt: nowIsoTimestamp(),
   };
 }

@@ -308,6 +308,7 @@ export class IndexedDbRepository implements CalorieRepository {
 
     if (existingMeta !== undefined) {
       await this.resetBuiltInFoods(db, existingMeta);
+      await this.syncVolumeSeedFoods(db);
       return;
     }
 
@@ -332,6 +333,47 @@ export class IndexedDbRepository implements CalorieRepository {
     }
 
     transaction.objectStore(STORES.meta).put(meta, 'app');
+    await transactionAsPromise(transaction);
+  }
+
+  /**
+   * Adds new liquid seed foods and upgrades old milk rows that predate the
+   * dual per-100g/per-100ml model. Custom/imported foods and logs are
+   * untouched.
+   */
+  private async syncVolumeSeedFoods(db: IDBDatabase): Promise<void> {
+    const volumeSeeds = this.seedFoods.filter(
+      (food) => food.nutritionPer100ml,
+    );
+    if (volumeSeeds.length === 0) {
+      return;
+    }
+
+    const transaction = db.transaction(STORES.foods, 'readwrite');
+    const store = transaction.objectStore(STORES.foods);
+
+    for (const seed of volumeSeeds) {
+      const request = store.get(seed.id);
+      request.onsuccess = () => {
+        const raw = request.result as unknown;
+        if (raw === undefined) {
+          store.put(foodSchema.parse(seed));
+          return;
+        }
+        if (isRecord(raw) && !raw.nutritionPer100ml) {
+          store.put(
+            foodSchema.parse({
+              ...seed,
+              createdAt:
+                typeof raw.createdAt === 'string'
+                  ? raw.createdAt
+                  : seed.createdAt,
+            }),
+          );
+        }
+      };
+    }
+
     await transactionAsPromise(transaction);
   }
 
@@ -620,7 +662,7 @@ export class IndexedDbRepository implements CalorieRepository {
     for (const log of logs) {
       for (const entries of Object.values(log.meals)) {
         for (const entry of entries) {
-          usage[entry.foodId] = (usage[entry.foodId] ?? 0) + entry.amountGrams;
+          usage[entry.foodId] = (usage[entry.foodId] ?? 0) + entry.amount;
         }
       }
     }

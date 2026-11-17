@@ -33,8 +33,8 @@ export function scaleNutrition(nutrition: Nutrition, factor: number): Nutrition 
 
 export function getEntryNutrition(entry: FoodEntry): Nutrition {
   return scaleNutrition(
-    entry.nutritionPer100gSnapshot,
-    entry.amountGrams / 100,
+    entry.nutritionPer100Snapshot,
+    entry.amount / 100,
   );
 }
 

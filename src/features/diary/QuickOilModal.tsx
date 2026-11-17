@@ -110,7 +110,8 @@ export function QuickOilModal({
     setSubmitting(true);
     try {
       const ok = await actions.addEntry(mealType, selectedOil, {
-        grams,
+        amount: grams,
+        unit: 'g',
         enteredQuantity: grams,
         enteredUnit: 'g',
       });

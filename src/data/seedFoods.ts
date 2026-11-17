@@ -1,8 +1,10 @@
 import type {
+  AmountUnit,
   Food,
   FoodBasis,
   FoodCategory,
   LocalizedText,
+  Nutrition,
 } from '../domain/types';
 
 export const SEED_VERSION = 1;
@@ -17,6 +19,8 @@ interface SeedFoodInput {
   proteinG: number;
   carbsG: number;
   fatG: number;
+  nutritionPer100ml?: Nutrition;
+  defaultUnit?: AmountUnit;
   servings?: { label: string; grams: number }[];
 }
 
@@ -32,6 +36,10 @@ function makeSeedFood(input: SeedFoodInput): Food {
       carbsG: input.carbsG,
       fatG: input.fatG,
     },
+    ...(input.nutritionPer100ml
+      ? { nutritionPer100ml: { ...input.nutritionPer100ml } }
+      : {}),
+    defaultUnit: input.defaultUnit ?? 'g',
     servings: (input.servings ?? []).map((serving, index) => ({
       id: `builtin-${input.id}-serving-${index + 1}`,
       label: serving.label,
@@ -324,7 +332,47 @@ export const SEED_FOODS: Food[] = [
     proteinG: 3.2,
     carbsG: 4.8,
     fatG: 3.3,
-    servings: [{ label: '盒', grams: 250 }],
+    nutritionPer100ml: {
+      kcal: 61,
+      proteinG: 3.2,
+      carbsG: 4.8,
+      fatG: 3.3,
+    },
+    defaultUnit: 'ml',
+  }),
+  makeSeedFood({
+    id: 'reduced-fat-milk-2',
+    names: { 'zh-CN': '2% 低脂牛奶' },
+    category: 'egg_dairy_soy',
+    basis: 'as_sold',
+    kcal: 50,
+    proteinG: 3.3,
+    carbsG: 4.8,
+    fatG: 2,
+    nutritionPer100ml: {
+      kcal: 50,
+      proteinG: 3.3,
+      carbsG: 4.8,
+      fatG: 2,
+    },
+    defaultUnit: 'ml',
+  }),
+  makeSeedFood({
+    id: 'low-fat-milk-1',
+    names: { 'zh-CN': '1% 低脂牛奶' },
+    category: 'egg_dairy_soy',
+    basis: 'as_sold',
+    kcal: 42,
+    proteinG: 3.4,
+    carbsG: 5,
+    fatG: 1,
+    nutritionPer100ml: {
+      kcal: 42,
+      proteinG: 3.4,
+      carbsG: 5,
+      fatG: 1,
+    },
+    defaultUnit: 'ml',
   }),
   makeSeedFood({
     id: 'skim-milk',
@@ -335,7 +383,13 @@ export const SEED_FOODS: Food[] = [
     proteinG: 3.4,
     carbsG: 5,
     fatG: 0.1,
-    servings: [{ label: '盒', grams: 250 }],
+    nutritionPer100ml: {
+      kcal: 34,
+      proteinG: 3.4,
+      carbsG: 5,
+      fatG: 0.1,
+    },
+    defaultUnit: 'ml',
   }),
   makeSeedFood({
     id: 'plain-yogurt',

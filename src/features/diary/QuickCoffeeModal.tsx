@@ -99,6 +99,7 @@ export function QuickCoffeeModal({
       category: 'other',
       basis: 'as_sold',
       nutritionPer100g: per100g,
+      defaultUnit: 'g',
       servings: [],
       source: 'custom',
       createdAt: now,
@@ -108,7 +109,8 @@ export function QuickCoffeeModal({
     setSubmitting(true);
     try {
       const ok = await actions.addEntry('breakfast', food, {
-        grams: result.grams,
+        amount: result.grams,
+        unit: 'g',
         enteredQuantity: 1,
         enteredUnit: 'serving',
         servingLabel: t('quickCoffee.cup'),

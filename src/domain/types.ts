@@ -19,7 +19,9 @@ export type FoodBasis = 'raw' | 'dry' | 'as_sold';
 
 export type FoodSource = 'builtin' | 'custom' | 'imported';
 
-export type EntryUnit = 'g' | 'serving';
+export type AmountUnit = 'g' | 'ml';
+
+export type EntryUnit = 'g' | 'ml' | 'serving';
 
 export type Sex = 'male' | 'female';
 
@@ -82,7 +84,13 @@ export interface Food {
   names: LocalizedText;
   category: FoodCategory;
   basis: FoodBasis;
-  nutritionPer100g: Nutrition;
+  /**
+   * At least one nutrition reference is required. A food with both can be
+   * logged in either grams or millilitres without needing a density value.
+   */
+  nutritionPer100g?: Nutrition;
+  nutritionPer100ml?: Nutrition;
+  defaultUnit: AmountUnit;
   servings: ServingOption[];
   /**
    * Optional batch metadata. A food with this field represents a large dish
@@ -109,12 +117,14 @@ export interface FoodEntry {
    */
   foodNames: LocalizedText;
   batchComponents?: FoodEntryBatchComponent[];
-  amountGrams: number;
+  amount: number;
+  /** Unit of amount, and the basis of nutritionPer100Snapshot. */
+  unit: AmountUnit;
   enteredQuantity: number;
   enteredUnit: EntryUnit;
   servingLabel?: string;
   servingGrams?: number;
-  nutritionPer100gSnapshot: Nutrition;
+  nutritionPer100Snapshot: Nutrition;
   createdAt: string;
   updatedAt: string;
 }
@@ -158,7 +168,9 @@ export interface FoodDraft {
   names: LocalizedText;
   category: FoodCategory;
   basis: FoodBasis;
-  nutritionPer100g: Nutrition;
+  nutritionPer100g?: Nutrition;
+  nutritionPer100ml?: Nutrition;
+  defaultUnit: AmountUnit;
   servings: {
     label: string;
     grams: number;
@@ -234,7 +246,9 @@ export interface ImportedFoodInput {
   names: LocalizedText;
   category: FoodCategory;
   basis: FoodBasis;
-  nutritionPer100g: Nutrition;
+  nutritionPer100g?: Nutrition;
+  nutritionPer100ml?: Nutrition;
+  defaultUnit?: AmountUnit;
   servings?: {
     id?: string;
     label: string;
