@@ -58,7 +58,7 @@ export const zhCN = {
   'trends.withinTargetHint': '已完成记录',
   'trends.noAverage': '—',
   'trends.chartTitle': '热量与营养组成',
-  'trends.chartHint': '柱体高度为当日热量，颜色表示蛋白质、碳水和脂肪的供能占比。',
+  'trends.chartHint': '柱体高度为当日热量，颜色表示碳水、蛋白质和脂肪的供能占比。',
   'trends.chartAria': '每日热量与营养素组成柱状图',
   'trends.target': '目标',
   'trends.tableTitle': '每日明细',

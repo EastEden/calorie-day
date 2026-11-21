@@ -22,8 +22,8 @@ export function NutritionTable({ points }: NutritionTableProps) {
           <tr>
             <th scope="col">{t('trends.colDate')}</th>
             <th scope="col">{t('trends.colCalories')}</th>
-            <th scope="col">{t('trends.colProtein')}</th>
             <th scope="col">{t('trends.colCarbs')}</th>
+            <th scope="col">{t('trends.colProtein')}</th>
             <th scope="col">{t('trends.colFat')}</th>
           </tr>
         </thead>
@@ -68,8 +68,8 @@ export function NutritionTable({ points }: NutritionTableProps) {
                     EMPTY
                   )}
                 </td>
-                <td>{hasData ? `${formatDecimal(point.totals.proteinG)}g` : EMPTY}</td>
                 <td>{hasData ? `${formatDecimal(point.totals.carbsG)}g` : EMPTY}</td>
+                <td>{hasData ? `${formatDecimal(point.totals.proteinG)}g` : EMPTY}</td>
                 <td>{hasData ? `${formatDecimal(point.totals.fatG)}g` : EMPTY}</td>
               </tr>
             );

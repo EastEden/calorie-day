@@ -115,8 +115,8 @@ export function CalorieCompositionChart({
   return (
     <div className="trend-chart">
       <div className="trend-chart__legend" aria-hidden="true">
-        <span><i className="trend-chart__swatch trend-chart__swatch--protein" />{t('common.protein')}</span>
         <span><i className="trend-chart__swatch trend-chart__swatch--carbs" />{t('common.carbs')}</span>
+        <span><i className="trend-chart__swatch trend-chart__swatch--protein" />{t('common.protein')}</span>
         <span><i className="trend-chart__swatch trend-chart__swatch--fat" />{t('common.fat')}</span>
         <span><i className="trend-chart__swatch trend-chart__swatch--target" />{t('trends.target')}</span>
       </div>
@@ -159,9 +159,9 @@ export function CalorieCompositionChart({
           const proteinHeight = (bar.proteinKcal / axisMax) * PLOT_HEIGHT;
           const carbsHeight = (bar.carbsKcal / axisMax) * PLOT_HEIGHT;
           const fatHeight = (bar.fatKcal / axisMax) * PLOT_HEIGHT;
-          const proteinY = bottom - proteinHeight;
-          const carbsY = proteinY - carbsHeight;
-          const fatY = carbsY - fatHeight;
+          const carbsY = bottom - carbsHeight;
+          const proteinY = carbsY - proteinHeight;
+          const fatY = proteinY - fatHeight;
 
           return (
             <g
@@ -169,18 +169,18 @@ export function CalorieCompositionChart({
               className={`trend-chart__bar ${bar.isOverTarget ? 'is-over-target' : ''}`}
             >
               <rect
-                className="trend-chart__segment trend-chart__segment--protein"
-                x={bar.x}
-                y={proteinY}
-                width={bar.width}
-                height={proteinHeight}
-              />
-              <rect
                 className="trend-chart__segment trend-chart__segment--carbs"
                 x={bar.x}
                 y={carbsY}
                 width={bar.width}
                 height={carbsHeight}
+              />
+              <rect
+                className="trend-chart__segment trend-chart__segment--protein"
+                x={bar.x}
+                y={proteinY}
+                width={bar.width}
+                height={proteinHeight}
               />
               <rect
                 className="trend-chart__segment trend-chart__segment--fat"
