@@ -6,6 +6,7 @@ import {
   getMacroEnergy,
   normalizeNutritionToPer100g,
   scaleNutrition,
+  scaleNutritionFromPer100g,
   sumEntries,
 } from '../../domain/nutrition';
 import type { FoodEntry, Nutrition } from '../../domain/types';
@@ -182,6 +183,27 @@ describe('nutrition', () => {
     expect(() => normalizeNutritionToPer100g(sample, Number.NaN)).toThrow();
     expect(() =>
       normalizeNutritionToPer100g(sample, Number.POSITIVE_INFINITY),
+    ).toThrow();
+  });
+
+  it('scales per-100g nutrition to a custom serving weight rounded to 1 decimal place', () => {
+    expect(
+      scaleNutritionFromPer100g(
+        { kcal: 400, proteinG: 16.7, carbsG: 50, fatG: 13.3 },
+        30,
+      ),
+    ).toEqual({
+      kcal: 120,
+      proteinG: 5,
+      carbsG: 15,
+      fatG: 4,
+    });
+
+    expect(() =>
+      scaleNutritionFromPer100g(
+        { kcal: 400, proteinG: 10, carbsG: 20, fatG: 5 },
+        0,
+      ),
     ).toThrow();
   });
 });

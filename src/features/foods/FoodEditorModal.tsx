@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useId,
   useState,
   type FormEvent,
 } from 'react';
@@ -22,7 +23,10 @@ import {
 import { formatDecimal } from '../../domain/formatters';
 import { createId } from '../../domain/id';
 import { withZhCnName } from '../../domain/localizedText';
-import { normalizeNutritionToPer100g } from '../../domain/nutrition';
+import {
+  normalizeNutritionToPer100g,
+  scaleNutritionFromPer100g,
+} from '../../domain/nutrition';
 import { nutritionSchema } from '../../domain/schemas';
 import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
@@ -36,6 +40,13 @@ interface FoodEditorModalProps {
 }
 
 type NutritionInputMode = 'per100g' | 'perServing';
+
+interface NutritionDraft {
+  kcal: string;
+  protein: string;
+  carbs: string;
+  fat: string;
+}
 
 interface ServingRow {
   key: string;
@@ -53,9 +64,63 @@ interface FieldErrors {
 
 const BASIS_OPTIONS: FoodBasis[] = ['raw', 'dry', 'as_sold'];
 const MAX_REFERENCE_GRAMS = 10_000;
+const EMPTY_NUTRITION_DRAFT: NutritionDraft = {
+  kcal: '',
+  protein: '',
+  carbs: '',
+  fat: '',
+};
 
 function parseDecimalInput(value: string): number {
   return Number(value.trim().replace(',', '.'));
+}
+
+function nutritionToDraft(nutrition: Nutrition): NutritionDraft {
+  return {
+    kcal: String(nutrition.kcal),
+    protein: String(nutrition.proteinG),
+    carbs: String(nutrition.carbsG),
+    fat: String(nutrition.fatG),
+  };
+}
+
+function isEmptyNutritionDraft(draft: NutritionDraft): boolean {
+  return (
+    draft.kcal.trim() === '' &&
+    draft.protein.trim() === '' &&
+    draft.carbs.trim() === '' &&
+    draft.fat.trim() === ''
+  );
+}
+
+function parseNutritionDraft(draft: NutritionDraft): Nutrition | null {
+  if (
+    draft.kcal.trim() === '' ||
+    draft.protein.trim() === '' ||
+    draft.carbs.trim() === '' ||
+    draft.fat.trim() === ''
+  ) {
+    return null;
+  }
+  const candidate: Nutrition = {
+    kcal: parseDecimalInput(draft.kcal),
+    proteinG: parseDecimalInput(draft.protein),
+    carbsG: parseDecimalInput(draft.carbs),
+    fatG: parseDecimalInput(draft.fat),
+  };
+  if (
+    !Number.isFinite(candidate.kcal) ||
+    candidate.kcal < 0 ||
+    !Number.isFinite(candidate.proteinG) ||
+    candidate.proteinG < 0 ||
+    !Number.isFinite(candidate.carbsG) ||
+    candidate.carbsG < 0 ||
+    !Number.isFinite(candidate.fatG) ||
+    candidate.fatG < 0
+  ) {
+    return null;
+  }
+  return candidate;
 }
 
 function makeServingRows(food: Food | null): ServingRow[] {
@@ -73,16 +138,23 @@ export function FoodEditorModal({
 }: FoodEditorModalProps) {
   const { t } = useI18n();
   const { actions, isSaving } = useApp();
+  const nutritionLabelId = useId();
+  const servingsLabelId = useId();
+  const isCreateMode = food === null;
   const [name, setName] = useState('');
   const [category, setCategory] = useState<FoodCategory>('protein');
   const [basis, setBasis] = useState<FoodBasis>('raw');
   const [nutritionMode, setNutritionMode] =
     useState<NutritionInputMode>('per100g');
   const [referenceGrams, setReferenceGrams] = useState('');
-  const [kcal, setKcal] = useState('');
-  const [protein, setProtein] = useState('');
-  const [carbs, setCarbs] = useState('');
-  const [fat, setFat] = useState('');
+  const [per100gDraft, setPer100gDraft] = useState<NutritionDraft>(
+    EMPTY_NUTRITION_DRAFT,
+  );
+  const [perServingDraft, setPerServingDraft] = useState<NutritionDraft>(
+    EMPTY_NUTRITION_DRAFT,
+  );
+  const [lastEditedMode, setLastEditedMode] =
+    useState<NutritionInputMode | null>(null);
   const [servings, setServings] = useState<ServingRow[]>([]);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
@@ -100,10 +172,11 @@ export function FoodEditorModal({
     setBasis(food?.basis ?? 'raw');
     setNutritionMode('per100g');
     setReferenceGrams('');
-    setKcal(food ? String(food.nutritionPer100g.kcal) : '');
-    setProtein(food ? String(food.nutritionPer100g.proteinG) : '');
-    setCarbs(food ? String(food.nutritionPer100g.carbsG) : '');
-    setFat(food ? String(food.nutritionPer100g.fatG) : '');
+    setPer100gDraft(
+      food ? nutritionToDraft(food.nutritionPer100g) : EMPTY_NUTRITION_DRAFT,
+    );
+    setPerServingDraft(EMPTY_NUTRITION_DRAFT);
+    setLastEditedMode(null);
     setServings(makeServingRows(food));
     setErrors({});
     setSubmitting(false);
@@ -120,6 +193,12 @@ export function FoodEditorModal({
     ? t('foodEditor.descriptionEdit', { source: sourceLabel ?? '' })
     : t('foodEditor.descriptionAdd');
 
+  const activeMode: NutritionInputMode = isCreateMode
+    ? nutritionMode
+    : 'per100g';
+  const activeDraft =
+    activeMode === 'perServing' ? perServingDraft : per100gDraft;
+
   const parsedReferenceGrams =
     referenceGrams.trim() === ''
       ? Number.NaN
@@ -129,39 +208,11 @@ export function FoodEditorModal({
     parsedReferenceGrams > 0 &&
     parsedReferenceGrams <= MAX_REFERENCE_GRAMS;
 
-  const parsedEnteredNutrition: Nutrition | null = (() => {
-    if (
-      kcal.trim() === '' ||
-      protein.trim() === '' ||
-      carbs.trim() === '' ||
-      fat.trim() === ''
-    ) {
-      return null;
-    }
-    const candidate: Nutrition = {
-      kcal: parseDecimalInput(kcal),
-      proteinG: parseDecimalInput(protein),
-      carbsG: parseDecimalInput(carbs),
-      fatG: parseDecimalInput(fat),
-    };
-    if (
-      !Number.isFinite(candidate.kcal) ||
-      candidate.kcal < 0 ||
-      !Number.isFinite(candidate.proteinG) ||
-      candidate.proteinG < 0 ||
-      !Number.isFinite(candidate.carbsG) ||
-      candidate.carbsG < 0 ||
-      !Number.isFinite(candidate.fatG) ||
-      candidate.fatG < 0
-    ) {
-      return null;
-    }
-    return candidate;
-  })();
+  const parsedEnteredNutrition = parseNutritionDraft(activeDraft);
 
   const convertedPreview: Nutrition | null = (() => {
     if (
-      nutritionMode !== 'perServing' ||
+      activeMode !== 'perServing' ||
       !hasValidReferenceGrams ||
       !parsedEnteredNutrition
     ) {
@@ -175,13 +226,77 @@ export function FoodEditorModal({
   })();
 
   const nutritionLegend =
-    nutritionMode === 'perServing'
+    activeMode === 'perServing'
       ? hasValidReferenceGrams
         ? t('foodEditor.perServingWithGrams', {
             grams: formatDecimal(parsedReferenceGrams),
           })
         : t('foodEditor.perServing')
       : t('foodEditor.per100');
+
+  const updateNutritionField = (
+    field: keyof NutritionDraft,
+    value: string,
+  ) => {
+    if (activeMode === 'perServing') {
+      setPerServingDraft((current) => ({ ...current, [field]: value }));
+      setLastEditedMode('perServing');
+    } else {
+      setPer100gDraft((current) => ({ ...current, [field]: value }));
+      setLastEditedMode('per100g');
+    }
+    setErrors((current) => ({
+      ...current,
+      nutrition: undefined,
+    }));
+  };
+
+  const switchNutritionMode = (nextMode: NutritionInputMode) => {
+    if (!isCreateMode || nextMode === nutritionMode) {
+      return;
+    }
+
+    if (nextMode === 'per100g') {
+      const servingNutrition = parseNutritionDraft(perServingDraft);
+      if (
+        hasValidReferenceGrams &&
+        servingNutrition &&
+        (lastEditedMode === 'perServing' || isEmptyNutritionDraft(per100gDraft))
+      ) {
+        const converted = normalizeNutritionToPer100g(
+          servingNutrition,
+          parsedReferenceGrams,
+        );
+        if (nutritionSchema.safeParse(converted).success) {
+          setPer100gDraft(nutritionToDraft(converted));
+          setLastEditedMode(null);
+        }
+      }
+    } else {
+      const per100gNutrition = parseNutritionDraft(per100gDraft);
+      if (
+        hasValidReferenceGrams &&
+        per100gNutrition &&
+        (lastEditedMode === 'per100g' || isEmptyNutritionDraft(perServingDraft))
+      ) {
+        const converted = scaleNutritionFromPer100g(
+          per100gNutrition,
+          parsedReferenceGrams,
+        );
+        if (nutritionSchema.safeParse(converted).success) {
+          setPerServingDraft(nutritionToDraft(converted));
+          setLastEditedMode(null);
+        }
+      }
+    }
+
+    setNutritionMode(nextMode);
+    setErrors((current) => ({
+      ...current,
+      referenceGrams: undefined,
+      nutrition: undefined,
+    }));
+  };
 
   const validate = (): FieldErrors => {
     const next: FieldErrors = {};
@@ -191,15 +306,15 @@ export function FoodEditorModal({
       next.name = t('foodEditor.nameTooLong');
     }
 
-    if (nutritionMode === 'perServing' && !hasValidReferenceGrams) {
+    if (activeMode === 'perServing' && !hasValidReferenceGrams) {
       next.referenceGrams = t('foodEditor.referenceGramsRequired');
     }
 
     const numericFields = [
-      { labelKey: 'common.calories' as const, value: kcal },
-      { labelKey: 'common.protein' as const, value: protein },
-      { labelKey: 'common.carbs' as const, value: carbs },
-      { labelKey: 'common.fat' as const, value: fat },
+      { labelKey: 'common.calories' as const, value: activeDraft.kcal },
+      { labelKey: 'common.protein' as const, value: activeDraft.protein },
+      { labelKey: 'common.carbs' as const, value: activeDraft.carbs },
+      { labelKey: 'common.fat' as const, value: activeDraft.fat },
     ];
 
     for (const field of numericFields) {
@@ -218,7 +333,7 @@ export function FoodEditorModal({
 
     if (!next.nutrition && parsedEnteredNutrition) {
       const candidatePer100g =
-        nutritionMode === 'perServing'
+        activeMode === 'perServing'
           ? hasValidReferenceGrams
             ? normalizeNutritionToPer100g(
                 parsedEnteredNutrition,
@@ -262,7 +377,7 @@ export function FoodEditorModal({
     }
 
     const nutritionPer100g =
-      nutritionMode === 'perServing'
+      activeMode === 'perServing'
         ? normalizeNutritionToPer100g(
             parsedEnteredNutrition,
             parsedReferenceGrams,
@@ -436,40 +551,45 @@ export function FoodEditorModal({
           <p className="field-hint">{t('foodEditor.basisHint')}</p>
         </fieldset>
 
-        <fieldset className="form-section form-section--plain">
+        <div
+          className="form-section form-section--plain"
+          role="group"
+          aria-labelledby={nutritionLabelId}
+        >
           <div className="form-section__title-row">
-            <legend className="field-label">{nutritionLegend}</legend>
-            <div
-              className="segmented food-editor__mode-toggle"
-              role="group"
-              aria-label={t('foodEditor.nutritionModeAria')}
-            >
-              {(['per100g', 'perServing'] as const).map((mode) => (
-                <button
-                  type="button"
-                  key={mode}
-                  className={`segmented__option ${
-                    nutritionMode === mode ? 'is-active' : ''
-                  }`}
-                  aria-pressed={nutritionMode === mode}
-                  onClick={() => {
-                    setNutritionMode(mode);
-                    setErrors((current) => ({
-                      ...current,
-                      referenceGrams: undefined,
-                      nutrition: undefined,
-                    }));
-                  }}
-                >
-                  {mode === 'per100g'
-                    ? t('foodEditor.modePer100g')
-                    : t('foodEditor.modePerServing')}
-                </button>
-              ))}
-            </div>
+            <span id={nutritionLabelId} className="field-label">
+              {nutritionLegend}
+            </span>
+            {isCreateMode && (
+              <div
+                className="segmented food-editor__mode-toggle"
+                role="group"
+                aria-label={t('foodEditor.nutritionModeAria')}
+              >
+                {(['per100g', 'perServing'] as const).map((mode) => (
+                  <button
+                    type="button"
+                    key={mode}
+                    className={`segmented__option ${
+                      activeMode === mode ? 'is-active' : ''
+                    }`}
+                    aria-pressed={activeMode === mode}
+                    onClick={() => switchNutritionMode(mode)}
+                  >
+                    {mode === 'per100g'
+                      ? t('foodEditor.modePer100g')
+                      : t('foodEditor.modePerServing')}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
-          {nutritionMode === 'perServing' && (
+          {isCreateMode && (
+            <p className="field-hint">{t('foodEditor.modeSwitchHint')}</p>
+          )}
+
+          {activeMode === 'perServing' && (
             <label className="field food-editor__reference-field">
               <span>{t('foodEditor.referenceGrams')}</span>
               <span className="input-with-suffix">
@@ -483,6 +603,7 @@ export function FoodEditorModal({
                   placeholder={t('foodEditor.referenceGramsPlaceholder')}
                   onChange={(event) => {
                     setReferenceGrams(event.target.value);
+                    setLastEditedMode('perServing');
                     setErrors((current) => ({
                       ...current,
                       referenceGrams: undefined,
@@ -507,15 +628,11 @@ export function FoodEditorModal({
                   inputMode="decimal"
                   min={0}
                   step="any"
-                  value={kcal}
+                  value={activeDraft.kcal}
                   placeholder="0"
-                  onChange={(event) => {
-                    setKcal(event.target.value);
-                    setErrors((current) => ({
-                      ...current,
-                      nutrition: undefined,
-                    }));
-                  }}
+                  onChange={(event) =>
+                    updateNutritionField('kcal', event.target.value)
+                  }
                 />
                 <span>{t('common.kcal')}</span>
               </span>
@@ -528,15 +645,11 @@ export function FoodEditorModal({
                   inputMode="decimal"
                   min={0}
                   step="any"
-                  value={protein}
+                  value={activeDraft.protein}
                   placeholder="0"
-                  onChange={(event) => {
-                    setProtein(event.target.value);
-                    setErrors((current) => ({
-                      ...current,
-                      nutrition: undefined,
-                    }));
-                  }}
+                  onChange={(event) =>
+                    updateNutritionField('protein', event.target.value)
+                  }
                 />
                 <span>{t('common.gram')}</span>
               </span>
@@ -549,15 +662,11 @@ export function FoodEditorModal({
                   inputMode="decimal"
                   min={0}
                   step="any"
-                  value={carbs}
+                  value={activeDraft.carbs}
                   placeholder="0"
-                  onChange={(event) => {
-                    setCarbs(event.target.value);
-                    setErrors((current) => ({
-                      ...current,
-                      nutrition: undefined,
-                    }));
-                  }}
+                  onChange={(event) =>
+                    updateNutritionField('carbs', event.target.value)
+                  }
                 />
                 <span>{t('common.gram')}</span>
               </span>
@@ -570,15 +679,11 @@ export function FoodEditorModal({
                   inputMode="decimal"
                   min={0}
                   step="any"
-                  value={fat}
+                  value={activeDraft.fat}
                   placeholder="0"
-                  onChange={(event) => {
-                    setFat(event.target.value);
-                    setErrors((current) => ({
-                      ...current,
-                      nutrition: undefined,
-                    }));
-                  }}
+                  onChange={(event) =>
+                    updateNutritionField('fat', event.target.value)
+                  }
                 />
                 <span>{t('common.gram')}</span>
               </span>
@@ -606,13 +711,17 @@ export function FoodEditorModal({
           {errors.nutrition && (
             <p className="field-error">{errors.nutrition}</p>
           )}
-        </fieldset>
+        </div>
 
-        <fieldset className="form-section form-section--plain">
+        <div
+          className="form-section form-section--plain"
+          role="group"
+          aria-labelledby={servingsLabelId}
+        >
           <div className="form-section__title-row">
-            <legend className="field-label">
+            <span id={servingsLabelId} className="field-label">
               {t('foodEditor.servings')}
-            </legend>
+            </span>
             <button
               type="button"
               className="text-button"
@@ -681,7 +790,7 @@ export function FoodEditorModal({
           {errors.servings && (
             <p className="field-error">{errors.servings}</p>
           )}
-        </fieldset>
+        </div>
 
         {errors.form && (
           <p className="form-error" role="alert">

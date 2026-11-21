@@ -413,6 +413,8 @@ export const zhCN = {
   'foodEditor.nutritionModeAria': '营养输入方式',
   'foodEditor.modePer100g': '按每 100g',
   'foodEditor.modePerServing': '按每份',
+  'foodEditor.modeSwitchHint':
+    '每 100g 与每份草稿分开保存；填写完整后切换会自动换算。',
   'foodEditor.referenceGrams': '每份重量',
   'foodEditor.referenceGramsPlaceholder': '例如 30',
   'foodEditor.referenceGramsRequired':
