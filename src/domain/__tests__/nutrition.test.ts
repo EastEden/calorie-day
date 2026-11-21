@@ -4,6 +4,7 @@ import {
   buildDaySummary,
   getEntryNutrition,
   getMacroEnergy,
+  normalizeNutritionToPer100g,
   scaleNutrition,
   sumEntries,
 } from '../../domain/nutrition';
@@ -134,5 +135,53 @@ describe('nutrition', () => {
 
     expect(summary.remainingKcal).toBe(-1000);
     expect(summary.calorieProgress).toBe(200);
+  });
+
+  it('normalizes per-serving nutrition to per-100g rounded to 1 decimal place', () => {
+    expect(
+      normalizeNutritionToPer100g(
+        { kcal: 120, proteinG: 5, carbsG: 15, fatG: 4 },
+        30,
+      ),
+    ).toEqual({
+      kcal: 400,
+      proteinG: 16.7,
+      carbsG: 50,
+      fatG: 13.3,
+    });
+
+    expect(
+      normalizeNutritionToPer100g(
+        { kcal: 0, proteinG: 0, carbsG: 0, fatG: 0 },
+        28,
+      ),
+    ).toEqual({
+      kcal: 0,
+      proteinG: 0,
+      carbsG: 0,
+      fatG: 0,
+    });
+
+    expect(
+      normalizeNutritionToPer100g(
+        { kcal: 250, proteinG: 12.5, carbsG: 30, fatG: 8.2 },
+        100,
+      ),
+    ).toEqual({
+      kcal: 250,
+      proteinG: 12.5,
+      carbsG: 30,
+      fatG: 8.2,
+    });
+  });
+
+  it('rejects non-positive or non-finite reference weights when normalizing', () => {
+    const sample: Nutrition = { kcal: 100, proteinG: 5, carbsG: 10, fatG: 2 };
+    expect(() => normalizeNutritionToPer100g(sample, 0)).toThrow();
+    expect(() => normalizeNutritionToPer100g(sample, -30)).toThrow();
+    expect(() => normalizeNutritionToPer100g(sample, Number.NaN)).toThrow();
+    expect(() =>
+      normalizeNutritionToPer100g(sample, Number.POSITIVE_INFINITY),
+    ).toThrow();
   });
 });

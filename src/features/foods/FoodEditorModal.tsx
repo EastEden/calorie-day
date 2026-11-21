@@ -11,6 +11,7 @@ import type {
   Food,
   FoodBasis,
   FoodCategory,
+  Nutrition,
 } from '../../domain/types';
 import {
   FOOD_BASIS_LABEL_KEYS,
@@ -18,8 +19,11 @@ import {
   FOOD_CATEGORY_LABEL_KEYS,
   FOOD_SOURCE_LABEL_KEYS,
 } from '../../domain/constants';
+import { formatDecimal } from '../../domain/formatters';
 import { createId } from '../../domain/id';
 import { withZhCnName } from '../../domain/localizedText';
+import { normalizeNutritionToPer100g } from '../../domain/nutrition';
+import { nutritionSchema } from '../../domain/schemas';
 import { useI18n } from '../../i18n';
 import { useApp } from '../../state/AppContext';
 import { Button } from '../../ui/Button';
@@ -31,6 +35,8 @@ interface FoodEditorModalProps {
   onClose: () => void;
 }
 
+type NutritionInputMode = 'per100g' | 'perServing';
+
 interface ServingRow {
   key: string;
   label: string;
@@ -39,12 +45,18 @@ interface ServingRow {
 
 interface FieldErrors {
   name?: string;
+  referenceGrams?: string;
   nutrition?: string;
   servings?: string;
   form?: string;
 }
 
 const BASIS_OPTIONS: FoodBasis[] = ['raw', 'dry', 'as_sold'];
+const MAX_REFERENCE_GRAMS = 10_000;
+
+function parseDecimalInput(value: string): number {
+  return Number(value.trim().replace(',', '.'));
+}
 
 function makeServingRows(food: Food | null): ServingRow[] {
   return (food?.servings ?? []).map((serving) => ({
@@ -64,6 +76,9 @@ export function FoodEditorModal({
   const [name, setName] = useState('');
   const [category, setCategory] = useState<FoodCategory>('protein');
   const [basis, setBasis] = useState<FoodBasis>('raw');
+  const [nutritionMode, setNutritionMode] =
+    useState<NutritionInputMode>('per100g');
+  const [referenceGrams, setReferenceGrams] = useState('');
   const [kcal, setKcal] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
@@ -83,6 +98,8 @@ export function FoodEditorModal({
     setName(food?.names['zh-CN'] ?? '');
     setCategory(food?.category ?? 'protein');
     setBasis(food?.basis ?? 'raw');
+    setNutritionMode('per100g');
+    setReferenceGrams('');
     setKcal(food ? String(food.nutritionPer100g.kcal) : '');
     setProtein(food ? String(food.nutritionPer100g.proteinG) : '');
     setCarbs(food ? String(food.nutritionPer100g.carbsG) : '');
@@ -103,12 +120,79 @@ export function FoodEditorModal({
     ? t('foodEditor.descriptionEdit', { source: sourceLabel ?? '' })
     : t('foodEditor.descriptionAdd');
 
+  const parsedReferenceGrams =
+    referenceGrams.trim() === ''
+      ? Number.NaN
+      : parseDecimalInput(referenceGrams);
+  const hasValidReferenceGrams =
+    Number.isFinite(parsedReferenceGrams) &&
+    parsedReferenceGrams > 0 &&
+    parsedReferenceGrams <= MAX_REFERENCE_GRAMS;
+
+  const parsedEnteredNutrition: Nutrition | null = (() => {
+    if (
+      kcal.trim() === '' ||
+      protein.trim() === '' ||
+      carbs.trim() === '' ||
+      fat.trim() === ''
+    ) {
+      return null;
+    }
+    const candidate: Nutrition = {
+      kcal: parseDecimalInput(kcal),
+      proteinG: parseDecimalInput(protein),
+      carbsG: parseDecimalInput(carbs),
+      fatG: parseDecimalInput(fat),
+    };
+    if (
+      !Number.isFinite(candidate.kcal) ||
+      candidate.kcal < 0 ||
+      !Number.isFinite(candidate.proteinG) ||
+      candidate.proteinG < 0 ||
+      !Number.isFinite(candidate.carbsG) ||
+      candidate.carbsG < 0 ||
+      !Number.isFinite(candidate.fatG) ||
+      candidate.fatG < 0
+    ) {
+      return null;
+    }
+    return candidate;
+  })();
+
+  const convertedPreview: Nutrition | null = (() => {
+    if (
+      nutritionMode !== 'perServing' ||
+      !hasValidReferenceGrams ||
+      !parsedEnteredNutrition
+    ) {
+      return null;
+    }
+    const candidate = normalizeNutritionToPer100g(
+      parsedEnteredNutrition,
+      parsedReferenceGrams,
+    );
+    return nutritionSchema.safeParse(candidate).success ? candidate : null;
+  })();
+
+  const nutritionLegend =
+    nutritionMode === 'perServing'
+      ? hasValidReferenceGrams
+        ? t('foodEditor.perServingWithGrams', {
+            grams: formatDecimal(parsedReferenceGrams),
+          })
+        : t('foodEditor.perServing')
+      : t('foodEditor.per100');
+
   const validate = (): FieldErrors => {
     const next: FieldErrors = {};
     if (!name.trim()) {
       next.name = t('foodEditor.nameRequired');
     } else if (name.trim().length > 80) {
       next.name = t('foodEditor.nameTooLong');
+    }
+
+    if (nutritionMode === 'perServing' && !hasValidReferenceGrams) {
+      next.referenceGrams = t('foodEditor.referenceGramsRequired');
     }
 
     const numericFields = [
@@ -119,7 +203,7 @@ export function FoodEditorModal({
     ];
 
     for (const field of numericFields) {
-      const parsed = Number(field.value);
+      const parsed = parseDecimalInput(field.value);
       if (
         field.value.trim() === '' ||
         !Number.isFinite(parsed) ||
@@ -132,12 +216,30 @@ export function FoodEditorModal({
       }
     }
 
+    if (!next.nutrition && parsedEnteredNutrition) {
+      const candidatePer100g =
+        nutritionMode === 'perServing'
+          ? hasValidReferenceGrams
+            ? normalizeNutritionToPer100g(
+                parsedEnteredNutrition,
+                parsedReferenceGrams,
+              )
+            : null
+          : parsedEnteredNutrition;
+      if (
+        candidatePer100g &&
+        !nutritionSchema.safeParse(candidatePer100g).success
+      ) {
+        next.nutrition = t('foodEditor.convertedOutOfRange');
+      }
+    }
+
     for (const serving of servings) {
       if (!serving.label.trim()) {
         next.servings = t('foodEditor.servingNameRequired');
         break;
       }
-      const gramsValue = Number(serving.grams);
+      const gramsValue = parseDecimalInput(serving.grams);
       if (
         serving.grams.trim() === '' ||
         !Number.isFinite(gramsValue) ||
@@ -155,23 +257,26 @@ export function FoodEditorModal({
     event.preventDefault();
     const nextErrors = validate();
     setErrors(nextErrors);
-    if (Object.keys(nextErrors).length > 0) {
+    if (Object.keys(nextErrors).length > 0 || !parsedEnteredNutrition) {
       return;
     }
+
+    const nutritionPer100g =
+      nutritionMode === 'perServing'
+        ? normalizeNutritionToPer100g(
+            parsedEnteredNutrition,
+            parsedReferenceGrams,
+          )
+        : parsedEnteredNutrition;
 
     const draft = {
       names: withZhCnName(food?.names, name),
       category,
       basis,
-      nutritionPer100g: {
-        kcal: Number(kcal),
-        proteinG: Number(protein),
-        carbsG: Number(carbs),
-        fatG: Number(fat),
-      },
+      nutritionPer100g,
       servings: servings.map((serving) => ({
         label: serving.label.trim(),
-        grams: Number(serving.grams),
+        grams: parseDecimalInput(serving.grams),
       })),
     };
 
@@ -332,7 +437,67 @@ export function FoodEditorModal({
         </fieldset>
 
         <fieldset className="form-section form-section--plain">
-          <legend className="field-label">{t('foodEditor.per100')}</legend>
+          <div className="form-section__title-row">
+            <legend className="field-label">{nutritionLegend}</legend>
+            <div
+              className="segmented food-editor__mode-toggle"
+              role="group"
+              aria-label={t('foodEditor.nutritionModeAria')}
+            >
+              {(['per100g', 'perServing'] as const).map((mode) => (
+                <button
+                  type="button"
+                  key={mode}
+                  className={`segmented__option ${
+                    nutritionMode === mode ? 'is-active' : ''
+                  }`}
+                  aria-pressed={nutritionMode === mode}
+                  onClick={() => {
+                    setNutritionMode(mode);
+                    setErrors((current) => ({
+                      ...current,
+                      referenceGrams: undefined,
+                      nutrition: undefined,
+                    }));
+                  }}
+                >
+                  {mode === 'per100g'
+                    ? t('foodEditor.modePer100g')
+                    : t('foodEditor.modePerServing')}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {nutritionMode === 'perServing' && (
+            <label className="field food-editor__reference-field">
+              <span>{t('foodEditor.referenceGrams')}</span>
+              <span className="input-with-suffix">
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  min={0}
+                  max={MAX_REFERENCE_GRAMS}
+                  step="any"
+                  value={referenceGrams}
+                  placeholder={t('foodEditor.referenceGramsPlaceholder')}
+                  onChange={(event) => {
+                    setReferenceGrams(event.target.value);
+                    setErrors((current) => ({
+                      ...current,
+                      referenceGrams: undefined,
+                      nutrition: undefined,
+                    }));
+                  }}
+                />
+                <span>{t('common.gram')}</span>
+              </span>
+              {errors.referenceGrams && (
+                <span className="field-error">{errors.referenceGrams}</span>
+              )}
+            </label>
+          )}
+
           <div className="nutrition-input-grid">
             <label className="field">
               <span>{t('common.calories')}</span>
@@ -419,6 +584,25 @@ export function FoodEditorModal({
               </span>
             </label>
           </div>
+          {convertedPreview && (
+            <div
+              className="food-editor__converted-preview"
+              aria-live="polite"
+            >
+              <span>{t('foodEditor.convertedPreviewLabel')}</span>
+              <strong>
+                {formatDecimal(convertedPreview.kcal)} {t('common.kcal')}
+              </strong>
+              <small>
+                {t('common.carbs')} {formatDecimal(convertedPreview.carbsG)}
+                {t('common.gram')} · {t('common.proteinShort')}{' '}
+                {formatDecimal(convertedPreview.proteinG)}
+                {t('common.gram')} · {t('common.fat')}{' '}
+                {formatDecimal(convertedPreview.fatG)}
+                {t('common.gram')}
+              </small>
+            </div>
+          )}
           {errors.nutrition && (
             <p className="field-error">{errors.nutrition}</p>
           )}

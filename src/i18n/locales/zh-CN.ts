@@ -399,7 +399,7 @@ export const zhCN = {
   'foodEditor.titleAdd': '添加自定义食物',
   'foodEditor.descriptionEdit': '{{source}}食物 · 修改不会影响已经记录的历史数据',
   'foodEditor.descriptionAdd':
-    '营养数据按每 100g 填写，保存后可在记录食物时直接使用。',
+    '可按每 100g 或包装标注的每份重量填写，保存时会自动换算为每 100g。',
   'foodEditor.name': '食物名称',
   'foodEditor.nameHint':
     '当前版本编辑简体中文（zh-CN）名称；导入的其他语言名称会保留。',
@@ -408,6 +408,18 @@ export const zhCN = {
   'foodEditor.basis': '营养基准',
   'foodEditor.basisHint': '第一版统一使用未烹饪基准：生重、干重或商品可食部。',
   'foodEditor.per100': '每 100g 营养',
+  'foodEditor.perServing': '每份营养',
+  'foodEditor.perServingWithGrams': '每 {{grams}}g 营养',
+  'foodEditor.nutritionModeAria': '营养输入方式',
+  'foodEditor.modePer100g': '按每 100g',
+  'foodEditor.modePerServing': '按每份',
+  'foodEditor.referenceGrams': '每份重量',
+  'foodEditor.referenceGramsPlaceholder': '例如 30',
+  'foodEditor.referenceGramsRequired':
+    '每份重量必须是大于 0 且不超过 10000g 的数字。',
+  'foodEditor.convertedPreviewLabel': '将按每 100g 保存',
+  'foodEditor.convertedOutOfRange':
+    '换算为每 100g 后数值超出允许范围，请检查每份重量和营养数值。',
   'foodEditor.servings': '常用份量（可选）',
   'foodEditor.servingHint':
     '例如“个 · 50g”或“杯 · 250g”。记录时可以按份填写，也可以继续按克填写。',
