@@ -31,6 +31,50 @@ export function scaleNutrition(nutrition: Nutrition, factor: number): Nutrition 
   };
 }
 
+function roundToOneDecimal(value: number): number {
+  return Math.round(value * 10) / 10;
+}
+
+/**
+ * Converts nutrition reported for a custom serving weight (e.g. per 30g) into
+ * the canonical per-100g representation rounded to 1 decimal place.
+ */
+export function normalizeNutritionToPer100g(
+  nutrition: Nutrition,
+  referenceGrams: number,
+): Nutrition {
+  if (!Number.isFinite(referenceGrams) || referenceGrams <= 0) {
+    throw new Error('参考重量必须大于 0');
+  }
+  const scaled = scaleNutrition(nutrition, 100 / referenceGrams);
+  return {
+    kcal: roundToOneDecimal(scaled.kcal),
+    proteinG: roundToOneDecimal(scaled.proteinG),
+    carbsG: roundToOneDecimal(scaled.carbsG),
+    fatG: roundToOneDecimal(scaled.fatG),
+  };
+}
+
+/**
+ * Converts per-100g nutrition into nutrition for a custom serving weight
+ * (e.g. per 30g), rounded to 1 decimal place.
+ */
+export function scaleNutritionFromPer100g(
+  nutritionPer100g: Nutrition,
+  referenceGrams: number,
+): Nutrition {
+  if (!Number.isFinite(referenceGrams) || referenceGrams <= 0) {
+    throw new Error('参考重量必须大于 0');
+  }
+  const scaled = scaleNutrition(nutritionPer100g, referenceGrams / 100);
+  return {
+    kcal: roundToOneDecimal(scaled.kcal),
+    proteinG: roundToOneDecimal(scaled.proteinG),
+    carbsG: roundToOneDecimal(scaled.carbsG),
+    fatG: roundToOneDecimal(scaled.fatG),
+  };
+}
+
 export function getEntryNutrition(entry: FoodEntry): Nutrition {
   return scaleNutrition(
     entry.nutritionPer100gSnapshot,
