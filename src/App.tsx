@@ -14,6 +14,7 @@ import { BottomNav } from './app/BottomNav';
 import type { AppTab } from './app/navigation';
 import { DiaryPage } from './features/diary/DiaryPage';
 import { FoodsPage } from './features/foods/FoodsPage';
+import { TrendsPage } from './features/trends/TrendsPage';
 import { OnboardingPage } from './features/onboarding/OnboardingPage';
 import { SettingsPage } from './features/settings/SettingsPage';
 import { ShareModal } from './features/share/ShareModal';
@@ -186,6 +187,7 @@ export default function App() {
           {tab === 'diary' && (
             <DiaryPage onShare={() => setShareOpen(true)} />
           )}
+          {tab === 'trends' && <TrendsPage />}
           {tab === 'foods' && <FoodsPage />}
           {tab === 'settings' && <SettingsPage />}
         </div>
