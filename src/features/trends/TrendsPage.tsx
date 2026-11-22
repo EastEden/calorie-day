@@ -8,6 +8,7 @@ import {
 import {
   buildTrendData,
   type TrendData,
+  type TrendDayPoint,
   type TrendRangeDays,
 } from '../../domain/trends';
 import { useI18n } from '../../i18n';
@@ -15,6 +16,7 @@ import { useApp } from '../../state/AppContext';
 import { Button } from '../../ui/Button';
 import { CalorieCompositionChart } from './CalorieCompositionChart';
 import { NutritionTable } from './NutritionTable';
+import { TrendDayDialog } from './TrendDayDialog';
 import { TrendSummary } from './TrendSummary';
 
 function TrendsSkeleton() {
@@ -39,6 +41,9 @@ export function TrendsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [reloadToken, setReloadToken] = useState(0);
+  const [selectedPoint, setSelectedPoint] = useState<TrendDayPoint | null>(
+    null,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -114,7 +119,10 @@ export function TrendsPage() {
                   rangeDays === value ? 'is-active' : ''
                 }`}
                 aria-pressed={rangeDays === value}
-                onClick={() => setRangeDays(value)}
+                onClick={() => {
+                  setSelectedPoint(null);
+                  setRangeDays(value);
+                }}
               >
                 {value === 7 ? t('trends.range7') : t('trends.range30')}
               </button>
@@ -174,7 +182,17 @@ export function TrendsPage() {
                 <CalorieCompositionChart
                   points={data.points}
                   rangeDays={data.rangeDays}
+                  onSelectDay={
+                    data.rangeDays === 7
+                      ? (point) => setSelectedPoint(point)
+                      : undefined
+                  }
                 />
+                {data.rangeDays === 7 && (
+                  <p className="trend-chart__click-hint">
+                    {t('trends.chartClickHint')}
+                  </p>
+                )}
               </section>
 
               <section className="trend-card">
@@ -191,6 +209,11 @@ export function TrendsPage() {
           )}
         </>
       )}
+
+      <TrendDayDialog
+        point={selectedPoint}
+        onClose={() => setSelectedPoint(null)}
+      />
     </div>
   );
 }

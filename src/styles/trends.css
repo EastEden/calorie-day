@@ -182,6 +182,23 @@
   stroke-linejoin: round;
 }
 
+.trend-chart__hit {
+  fill: transparent;
+  pointer-events: all;
+  cursor: pointer;
+  outline: none;
+}
+
+.trend-chart__hit:hover {
+  fill: rgba(47, 93, 69, 0.06);
+}
+
+.trend-chart__hit:focus-visible {
+  fill: rgba(47, 93, 69, 0.12);
+  stroke: var(--green);
+  stroke-width: 1.2;
+}
+
 .trend-chart__date-label {
   fill: var(--muted);
   font-family: var(--font-sans);
@@ -357,6 +374,110 @@
   font-size: 8px;
   font-style: normal;
   font-weight: 650;
+}
+
+.trend-chart__click-hint {
+  margin: -2px 0 0;
+  color: var(--muted-soft);
+  font-size: 9.5px;
+}
+
+.trend-day-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.trend-day-dialog__total {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface-soft);
+}
+
+.trend-day-dialog__total > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.trend-day-dialog__total strong {
+  color: var(--ink);
+  font-size: 25px;
+  font-weight: 740;
+  letter-spacing: -0.04em;
+  line-height: 1.2;
+  font-variant-numeric: tabular-nums;
+}
+
+.trend-day-dialog__total strong small {
+  color: var(--muted-soft);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+.trend-day-dialog__total > small {
+  color: var(--muted-soft);
+  font-size: 9px;
+}
+
+.trend-day-dialog__macros {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.trend-day-dialog__macro {
+  display: grid;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.trend-day-dialog__macro:last-child {
+  border-bottom: 0;
+}
+
+.trend-day-dialog__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+.trend-day-dialog__dot--carbs {
+  background: var(--carbs);
+}
+
+.trend-day-dialog__dot--protein {
+  background: var(--protein);
+}
+
+.trend-day-dialog__dot--fat {
+  background: var(--fat);
+}
+
+.trend-day-dialog__macro > span:nth-child(2) {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.trend-day-dialog__macro strong {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.trend-day-dialog__macro small {
+  color: var(--muted-soft);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
 }
 
 @media (max-width: 760px) {

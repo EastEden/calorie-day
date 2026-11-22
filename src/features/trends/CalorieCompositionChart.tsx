@@ -1,7 +1,11 @@
 import {
   formatKcal,
 } from '../../domain/formatters';
-import { formatMonthDay, formatWeekday } from '../../domain/dates';
+import {
+  formatMonthDay,
+  formatShortDate,
+  formatWeekday,
+} from '../../domain/dates';
 import { getMacroEnergy } from '../../domain/nutrition';
 import type { TrendDayPoint, TrendRangeDays } from '../../domain/trends';
 import { useI18n } from '../../i18n';
@@ -9,6 +13,7 @@ import { useI18n } from '../../i18n';
 interface CalorieCompositionChartProps {
   points: TrendDayPoint[];
   rangeDays: TrendRangeDays;
+  onSelectDay?: (point: TrendDayPoint) => void;
 }
 
 const CHART_WIDTH = 360;
@@ -91,6 +96,7 @@ function getDateLabel(
 export function CalorieCompositionChart({
   points,
   rangeDays,
+  onSelectDay,
 }: CalorieCompositionChartProps) {
   const { t } = useI18n();
   const bars = createBars(points, rangeDays);
@@ -209,6 +215,38 @@ export function CalorieCompositionChart({
             points={targetPolyline}
           />
         )}
+
+        {onSelectDay &&
+          rangeDays === 7 &&
+          points.map((point, index) => {
+            if (!point.hasEntries) {
+              return null;
+            }
+            const slotWidth = PLOT_WIDTH / points.length;
+            return (
+              <rect
+                key={`hit-${point.date}`}
+                className="trend-chart__hit"
+                x={PADDING.left + slotWidth * index}
+                y={PADDING.top}
+                width={slotWidth}
+                height={PLOT_HEIGHT}
+                role="button"
+                tabIndex={0}
+                aria-label={t('trends.chartPointAria', {
+                  date: formatShortDate(point.date),
+                  kcal: formatKcal(point.totals.kcal),
+                })}
+                onClick={() => onSelectDay(point)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    onSelectDay(point);
+                  }
+                }}
+              />
+            );
+          })}
 
         {points.map((point, index) => {
           const label = getDateLabel(
