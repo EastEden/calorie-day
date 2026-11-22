@@ -122,6 +122,10 @@ interface AppActions {
   ) => Promise<BackupPayload>;
   importBackup: (payload: BackupPayload) => Promise<BackupImportResult>;
   selectDate: (date: IsoDate) => void;
+  loadTrendLogs: (
+    from: IsoDate,
+    to: IsoDate,
+  ) => Promise<DailyLog[]>;
   requestPersistence: () => Promise<void>;
   refreshStorageInfo: () => Promise<void>;
   retryInitialization: () => void;
@@ -1096,6 +1100,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [showToast],
   );
 
+  const loadTrendLogs = useCallback(
+    async (from: IsoDate, to: IsoDate): Promise<DailyLog[]> => {
+      if (!isValidIsoDate(from) || !isValidIsoDate(to) || from > to) {
+        throw new Error(translate('trends.invalidRange'));
+      }
+      return repository.listDailyLogs(from, to);
+    },
+    [],
+  );
+
   const requestPersistence = useCallback(async () => {
     try {
       const info = await getStorageInfo(true);
@@ -1154,6 +1168,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       createBackup,
       importBackup,
       selectDate,
+      loadTrendLogs,
       requestPersistence,
       refreshStorageInfo,
       retryInitialization,
@@ -1178,6 +1193,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       createBackup,
       importBackup,
       selectDate,
+      loadTrendLogs,
       requestPersistence,
       refreshStorageInfo,
       retryInitialization,
