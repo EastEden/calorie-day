@@ -2,7 +2,6 @@ import {
   formatKcal,
 } from '../../domain/formatters';
 import {
-  formatMonthDay,
   formatShortDate,
   formatWeekday,
 } from '../../domain/dates';
@@ -78,6 +77,11 @@ function getGridValues(max: number): number[] {
   );
 }
 
+function formatCompactDate(date: string): string {
+  const [, month, day] = date.split('-');
+  return `${Number(month)}/${Number(day)}`;
+}
+
 function getDateLabel(
   point: TrendDayPoint,
   index: number,
@@ -87,8 +91,13 @@ function getDateLabel(
   if (rangeDays === 7) {
     return formatWeekday(point.date);
   }
-  if (index === 0 || index === total - 1 || index % 5 === 0) {
-    return formatMonthDay(point.date);
+  const distanceFromEnd = total - 1 - index;
+  if (
+    index === 0 ||
+    index === total - 1 ||
+    (index % 5 === 0 && distanceFromEnd >= 5)
+  ) {
+    return formatCompactDate(point.date);
   }
   return null;
 }
@@ -259,6 +268,8 @@ export function CalorieCompositionChart({
             return null;
           }
           const slotWidth = PLOT_WIDTH / points.length;
+          const isFirst = index === 0;
+          const isLast = index === points.length - 1;
           return (
             <text
               key={`label-${point.date}`}
@@ -267,7 +278,13 @@ export function CalorieCompositionChart({
               }`}
               x={PADDING.left + slotWidth * (index + 0.5)}
               y={CHART_HEIGHT - 12}
-              textAnchor="middle"
+              textAnchor={
+                rangeDays === 30 && isFirst
+                  ? 'start'
+                  : rangeDays === 30 && isLast
+                    ? 'end'
+                    : 'middle'
+              }
             >
               {point.isToday ? t('trends.today') : label}
             </text>

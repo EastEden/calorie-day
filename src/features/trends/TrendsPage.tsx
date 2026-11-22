@@ -36,6 +36,7 @@ function TrendsSkeleton() {
 export function TrendsPage() {
   const { t } = useI18n();
   const { actions, targets } = useApp();
+  const { loadTrendLogs } = actions;
   const [rangeDays, setRangeDays] = useState<TrendRangeDays>(7);
   const [data, setData] = useState<TrendData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -55,7 +56,7 @@ export function TrendsPage() {
       setLoadError(null);
 
       try {
-        const logs = await actions.loadTrendLogs(from, today);
+        const logs = await loadTrendLogs(from, today);
         if (cancelled) {
           return;
         }
@@ -90,7 +91,7 @@ export function TrendsPage() {
     return () => {
       cancelled = true;
     };
-  }, [actions, rangeDays, reloadToken, t, targets]);
+  }, [loadTrendLogs, rangeDays, reloadToken, t, targets]);
 
   const rangeLabel =
     data !== null
@@ -98,7 +99,10 @@ export function TrendsPage() {
       : '';
 
   return (
-    <div className="trends-page page-width">
+    <div
+      className="trends-page page-width"
+      aria-busy={isLoading}
+    >
       <header className="page-header trends-page__header">
         <div>
           <p className="eyebrow">{t('trends.eyebrow')}</p>
@@ -134,7 +138,7 @@ export function TrendsPage() {
         </div>
       </header>
 
-      {isLoading && <TrendsSkeleton />}
+      {data === null && isLoading && <TrendsSkeleton />}
 
       {!isLoading && loadError && (
         <section className="inline-error" role="alert">
@@ -157,7 +161,7 @@ export function TrendsPage() {
         </section>
       )}
 
-      {!isLoading && !loadError && data && (
+      {data && !loadError && (
         <>
           <TrendSummary data={data} />
 

@@ -33,7 +33,10 @@ export function TrendSummary({ data }: TrendSummaryProps) {
       <div className="trend-summary__card">
         <span>{t('trends.withinTarget')}</span>
         <strong>
-          {t('trends.days', { n: data.withinTargetDays })}
+          {data.completedLoggedDays === 0 ||
+          data.averageTargetKcal === null
+            ? t('trends.noAverage')
+            : `${data.withinTargetDays} / ${data.completedLoggedDays}`}
         </strong>
         <small>{t('trends.withinTargetHint')}</small>
       </div>

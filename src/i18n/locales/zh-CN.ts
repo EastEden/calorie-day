@@ -52,7 +52,6 @@ export const zhCN = {
   'trends.averageIntake': '平均摄入',
   'trends.averageHint': '不含今日',
   'trends.rangeDays': '最近 {{n}} 天',
-  'trends.days': '{{n}} 天',
   'trends.loggedDays': '记录天数',
   'trends.withinTarget': '未超目标',
   'trends.withinTargetHint': '已完成记录',
